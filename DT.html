@@ -34,15 +34,66 @@ var p;
 var point1,point2,point3;
 var circle;
 
+var allVertices = {};
+var allLinks = {};
+
+var maxVertexX = Number.MIN_VALUE;
+var maxVertexY = Number.MIN_VALUE;
+
 function Vertex(id,x,y) {
     this.id = id;
     this.x = x;
     this.y = y;
+
 }
 
 Vertex.prototype.draw = function() {
-    p.point(this.x,this.y);
+    //scale this so it fits the viewport essentially
+
+    var newX = (this.x / maxVertexX) * 0.8 * p.width + 0.1 * p.width;
+    var newY = (this.y / maxVertexY) * 0.8 * p.height + 0.1 * p.height;
+
+    p.point(newX,newY);
+    //p.point(this.x,this.y);
 }
+
+Vertex.prototype.getScaledCoords = function() {
+
+    var newX = (this.x / maxVertexX) * 0.8 * p.width + 0.1 * p.width;
+    var newY = (this.y / maxVertexY) * 0.8 * p.height + 0.1 * p.height;
+
+    return {'x':newX,'y':newY};
+}
+
+function Link(myVertex) {
+    this.parentVertex = myVertex;
+    this.vertices = [];
+}
+
+Link.prototype.addVertex = function(vertex) {
+    this.vertices.push(vertex);
+}
+
+Link.prototype.draw = function() {
+    this.drawEdges();
+}
+
+Link.prototype.drawEdges = function() {
+    var myCoords = this.parentVertex.getScaledCoords();
+    var myX = myCoords.x;
+    var myY = myCoords.y;
+
+    for(key in this.vertices)
+    {
+        var v = this.vertices[key];
+        var coords = v.getScaledCoords();
+        var x = coords.x;
+        var y = coords.y;
+
+        p.line(myX,myY,x,y);
+    }
+}
+
 
 function Point(x,y) {
     this.x = x;
@@ -103,38 +154,55 @@ function calculateCircle() {
 function sketchProc(processing) {
   // Override draw function, by default it will be called 60 times per second
     processing.draw = function() {
+
         // erase background
-	p.background(224);
-    
-	//calc the circle thing
-
-    theta += 0.007;
-    
-    var y = (Math.sin(theta)/2 + 0.5) * p.height * 0.8 + 0.1 * p.height;
-    point2.y = y;
-    var x = (Math.cos(theta*1.333)/2 + 0.5) * p.width * 0.8 + 0.1 * p.width;
-    point3.x = x;
-    
-    
-	calculateCircle();
-
-	p.strokeWeight(4);
-	//p.noFill();
-	circle.draw();
+        p.background(224);
         
-        p.strokeWeight(8);
-	p.stroke(p.color(255,0,0));
-	point1.draw();
-	p.stroke(p.color(0,255,0));
-	point2.draw();
-	p.stroke(p.color(0,0,255));
-	point3.draw();
+        //calc the circle thing
 
-	p.stroke(p.color(0,0,0,50));
-	p.strokeWeight(2);
-	p.line(point1.x,point1.y,point2.x,point2.y);
-	p.line(point2.x,point2.y,point3.x,point3.y);
-	p.line(point3.x,point3.y,point1.x,point1.y);
+        theta += 0.007;
+        
+        var y = (Math.sin(theta)/2 + 0.5) * p.height * 0.8 + 0.1 * p.height;
+        point2.y = y;
+        var x = (Math.cos(theta*1.333)/2 + 0.5) * p.width * 0.8 + 0.1 * p.width;
+        point3.x = x;
+        
+        
+        calculateCircle();
+
+        p.strokeWeight(4);
+        //p.noFill();
+        circle.draw();
+            
+            p.strokeWeight(8);
+        p.stroke(p.color(255,0,0));
+        point1.draw();
+        p.stroke(p.color(0,255,0));
+        point2.draw();
+        p.stroke(p.color(0,0,255));
+        point3.draw();
+
+        p.stroke(p.color(0,0,0,50));
+        p.strokeWeight(2);
+        p.line(point1.x,point1.y,point2.x,point2.y);
+        p.line(point2.x,point2.y,point3.x,point3.y);
+        p.line(point3.x,point3.y,point1.x,point1.y);
+
+
+        p.strokeWeight(8);
+        p.stroke(p.color(0,0,0,255));
+        for(key in allVertices)
+        {
+            allVertices[key].draw();
+        }
+
+        p.strokeWeight(2);
+        for(key in allLinks)
+        {
+            var l = allLinks[key];
+
+            l.draw();
+        }
 
     };
     
@@ -202,24 +270,68 @@ function readInVertices(numVertices,lines)
 {
     try{
 
-        allVertices = new Array(numVertices+1);
+        allVertices = {};
 
-        for(var i = 0; i < numVertices; i++)
+        //1-indexing >___________<
+        for(var i = 0; i <= lines.length; i++)
         {
             var theLine = lines[i];
-            var results = /(\d+)\s+(\d+)\s+(\d+)/.exec(theLine);
+
+            //regex for (1 - number of vertex) (2- x coord) (3- y coord)
+            var results = /\s*(\d+)\s+([.0-9]+)\s+([.0-9]+)/.exec(theLine);
+
+            if(!results)
+            {
+                continue;
+            }
             var vertexNum = results[1];
             var xCoord = results[2];
+            if(xCoord > maxVertexX)
+            {
+                maxVertexX = xCoord;
+            }
+            if(yCoord > maxVertexY)
+            {
+                maxVertexY = yCoord;
+            }
+
             var yCoord = results[3];
 
             //make a new vertex and assign it
-            allVertices[vertexNum] = 
+            allVertices[vertexNum] = new Vertex(vertexNum,xCoord,yCoord);
         }
+
     }
     catch(err)
     {
         alert("Something seems to be wrong with your input file format!");
         throw err;
+    }
+    //now add each vertex to each link as a test
+    testLinks();
+}
+
+function testLinks()
+{
+    for(key in allVertices)
+    {
+        var v = allVertices[key];
+        var l = new Link(v);
+
+        for(key2 in allVertices)
+        {
+            var j = allVertices[key2];
+            if(v != j)
+            {
+                //make add vertex
+                l.addVertex(j);
+            }
+        }
+        console.log("making this link");
+        console.log(l);
+        console.log("against this vertex");
+        console.log(v);
+        allLinks[v.id] = l;
     }
 }
 
@@ -235,12 +347,16 @@ $j(document).ready(function(){
 
     circle = new Circle(0,0,0);
 
+    var testFile = "12 2 0 0\n1 0 0\n2 0 3\n3 3 0\n 4 3 3\n5 1 1 \n 6 1 2\n7 2 1 \n 8 2 2 \n 9 0 1.5\n 10 1.5 0\n11 3 1.5\n 12 1.5 3";
+    $j('#inputFile').val(testFile);
+    loadFile();
+
 });
 
 
 </script>
 <div style="text-align:center;">
-    <canvas style="display:none"id="canvas1" width="600" height="800"></canvas></p>
+    <canvas id="canvas1" width="600" height="800"></canvas></p>
 
     <table>
         <tr>

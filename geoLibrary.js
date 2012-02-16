@@ -1,8 +1,23 @@
+/****** 
+    math things
+    
+*********/
+
+function randPoint() {
+    var x = p.random(0,p.width);
+    var y = p.random(0,p.height);
+    return new Point(x,y);
+}
+
+
+
 /************************
     Primitives and such
     
     
 ******************/
+
+
 
 
 function Vertex(id,x,y) {
@@ -44,6 +59,10 @@ function Point(x,y) {
 Point.prototype.draw = function() {
 
     p.point(this.x,this.y);
+}
+
+Point.prototype.getScaledCoords = function() {
+    return this;
 }
 
 
@@ -140,12 +159,21 @@ Triangle.prototype.testInCircumCircle = function(testPoint) {
 
 Triangle.prototype.draw = function() {
     //with scaled coordinates
+    
+    //draw the points
     for(var i = 0; i < 3; i++)
     {
-        var p = this.vertices[i].getScaledCoords();
-        p.draw();
+        var point = this.vertices[i].getScaledCoords();
+        point.draw();
     }
     
+    for(var i = 0; i < 2; i++)
+    {
+        var p1 = this.vertices[i].getScaledCoords();
+        var p2 = this.vertices[i+1].getScaledCoords();
+        
+        p.line(p1.x,p1.y,p2.x,p2.y);
+    }
     
 }
 

@@ -2,17 +2,7 @@
 <html>
 <head>
   <script src="processing-1.3.6-api.js"></script>
-  <title>Abstract Art </title>
-  
-  <meta property="og:title" content="Peter M Cottle.com"/>
-<meta property="og:type" content="website"/>
-<meta property="og:url" content="http://www.petercottle.com/experiment/abstractArt.html"/>
-<meta property="og:image" content="http://www.petercottle.com/experiment/Capture.PNG"/>
-<meta property="og:site_name" content="PeterMCottle.com"/>
-<meta property="og:description" content="Messing around with processing.js"/>
-
-
-  
+  <title>Delauney Triangulation</title>
   
 <body>
 <h2>Circumcircles</h2>
@@ -22,6 +12,7 @@ Mouse buttons (left, right, middle) to move the three points!
 <link href="style.css" rel="stylesheet" type="text/css"/>
 
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
+<script type="text/javascript" src="geoLibrary.js"></script>
 <script type="text/javascript">
 
 /*********Globals**********/
@@ -40,116 +31,12 @@ var allLinks = {};
 var maxVertexX = Number.MIN_VALUE;
 var maxVertexY = Number.MIN_VALUE;
 
-function Vertex(id,x,y) {
-    this.id = id;
-    this.x = x;
-    this.y = y;
-
-}
-
-Vertex.prototype.draw = function() {
-    //scale this so it fits the viewport essentially
-
-    var newX = (this.x / maxVertexX) * 0.8 * p.width + 0.1 * p.width;
-    var newY = (this.y / maxVertexY) * 0.8 * p.height + 0.1 * p.height;
-
-    p.point(newX,newY);
-    //p.point(this.x,this.y);
-}
-
-Vertex.prototype.getScaledCoords = function() {
-
-    var newX = (this.x / maxVertexX) * 0.8 * p.width + 0.1 * p.width;
-    var newY = (this.y / maxVertexY) * 0.8 * p.height + 0.1 * p.height;
-
-    return {'x':newX,'y':newY};
-}
-
-function Link(myVertex) {
-    this.parentVertex = myVertex;
-    this.vertices = [];
-}
-
-Link.prototype.addVertex = function(vertex) {
-    this.vertices.push(vertex);
-}
-
-Link.prototype.draw = function() {
-    this.drawEdges();
-}
-
-Link.prototype.drawEdges = function() {
-    var myCoords = this.parentVertex.getScaledCoords();
-    var myX = myCoords.x;
-    var myY = myCoords.y;
-
-    for(key in this.vertices)
-    {
-        var v = this.vertices[key];
-        var coords = v.getScaledCoords();
-        var x = coords.x;
-        var y = coords.y;
-
-        p.line(myX,myY,x,y);
-    }
-}
-
-
-function Point(x,y) {
-    this.x = x;
-    this.y = y;
-    
-    this.strokeWidth = 2;
-}
-
-Point.prototype.draw = function() {
-
-    p.point(this.x,this.y);
-}
-
-function Circle(x,y,radius) {
-    this.x = x;
-    this.y = y;
-    this.radius = radius;
-}
-
-Circle.prototype.draw = function() {
-    p.colorMode(p.HSB);
-    
-    p.stroke(0,0,255);
-    p.fill(p.map(this.radius,0,300,0,255),255,p.dist(0,0,this.x,this.y)*50);
-
-	p.ellipse(this.x,this.y,this.radius*2,this.radius*2);
-    p.colorMode(p.RGB);
-}
 
 function eraseCircle() {
 	circle.radius = 0;
 	circle.x = -10;
 }
 
-function calculateCircle() {
-	//from openprocessing.org/visuals/?visual=45489
-
-	//first get circles
-	var slope1 = (point1.y - point2.y) / (point1.x - point2.x);
-	var slope2 = (point2.y - point3.y) / (point2.x - point3.x);
-
-	if(Math.abs(slope1 - slope2) < 0.01)
-	{
-		eraseCircle();
-		return;
-	}
-	var centerX = (slope1 * slope2 * (point3.y - point1.y) + slope1*(point2.x + point3.x) - slope2*(point1.x + point2.x))/(2*(slope1-slope2));
-	var centerY = -1/slope1 * (centerX - (point1.x + point2.x)/2) + (point1.y + point2.y)/2;
-	var radius = p.dist(centerX,centerY,point2.x,point2.y);
-
-	circle.radius = radius;
-	circle.x = centerX;
-	circle.y = centerY;
-
-
-}
 
 function sketchProc(processing) {
   // Override draw function, by default it will be called 60 times per second
@@ -159,7 +46,6 @@ function sketchProc(processing) {
         p.background(224);
         
         //calc the circle thing
-
         theta += 0.007;
         
         var y = (Math.sin(theta)/2 + 0.5) * p.height * 0.8 + 0.1 * p.height;
@@ -167,14 +53,15 @@ function sketchProc(processing) {
         var x = (Math.cos(theta*1.333)/2 + 0.5) * p.width * 0.8 + 0.1 * p.width;
         point3.x = x;
         
+        var newC = Circle.prototype.circleFromPoints(point1,point2,point3);
+        //only reassign if valid triangle
+        if(newC) { circle = newC; }
         
-        calculateCircle();
-
         p.strokeWeight(4);
         //p.noFill();
         circle.draw();
             
-            p.strokeWeight(8);
+        p.strokeWeight(8);
         p.stroke(p.color(255,0,0));
         point1.draw();
         p.stroke(p.color(0,255,0));
@@ -191,6 +78,9 @@ function sketchProc(processing) {
 
         p.strokeWeight(8);
         p.stroke(p.color(0,0,0,255));
+        
+        
+        //draw the actual DT stuff
         for(key in allVertices)
         {
             allVertices[key].draw();
@@ -203,6 +93,7 @@ function sketchProc(processing) {
 
             l.draw();
         }
+        p.popMatrix();
 
     };
     
@@ -214,29 +105,29 @@ function sketchProc(processing) {
 
     processing.mouseDragged = function() {
 	    if(p.__mousePressed)
-           {
+        {
 		   p.mouseClicked();
-	}
-};
+        }
+    };
     
     processing.mouseClicked = function() {
-	//console.log("button" + p.mouseButton);
+        //console.log("button" + p.mouseButton);
 
-	if(p.mouseButton == 37)
-	{
-		//left click
-		setPointPos(point1,p.mouseX,p.mouseY);
-	}
-	else if(p.mouseButton == 3)
-	{
-		//right click
-		setPointPos(point2,p.mouseX,p.mouseY);
-	}
-	else if(p.mouseButton == 39)
-	{
-		//middle click? this is actually right
-		setPointPos(point3,p.mouseX,p.mouseY);
-	}
+        if(p.mouseButton == 37)
+        {
+            //left click
+            setPointPos(point1,p.mouseX,p.mouseY);
+        }
+        else if(p.mouseButton == 3)
+        {
+            //right click
+            setPointPos(point2,p.mouseX,p.mouseY);
+        }
+        else if(p.mouseButton == 39)
+        {
+            //middle click? this is actually right
+            setPointPos(point3,p.mouseX,p.mouseY);
+        }
 
     };
 }
@@ -284,18 +175,20 @@ function readInVertices(numVertices,lines)
             {
                 continue;
             }
-            var vertexNum = results[1];
-            var xCoord = results[2];
+
+            var vertexNum = Number(results[1]);
+            var xCoord = Number(results[2]);
+            var yCoord = Number(results[3]);
+
             if(xCoord > maxVertexX)
             {
                 maxVertexX = xCoord;
             }
+
             if(yCoord > maxVertexY)
             {
                 maxVertexY = yCoord;
             }
-
-            var yCoord = results[3];
 
             //make a new vertex and assign it
             allVertices[vertexNum] = new Vertex(vertexNum,xCoord,yCoord);
@@ -327,11 +220,16 @@ function testLinks()
                 l.addVertex(j);
             }
         }
+
+        /*
         console.log("making this link");
         console.log(l);
         console.log("against this vertex");
         console.log(v);
+        */
+
         allLinks[v.id] = l;
+        v.myLink = l;
     }
 }
 

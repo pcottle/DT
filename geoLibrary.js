@@ -49,6 +49,24 @@ Vertex.prototype.getCoords = function() {
     return {'x':this.x,'y':this.y}
 }
 
+function Edge(v1,v2) {
+    this.v1 = v1;
+    this.v2 = v2;
+}
+
+
+
+
+
+
+function orient2D(v1,v2,v3) {
+    
+
+
+
+}
+
+
 function Point(x,y) {
     this.x = x;
     this.y = y;

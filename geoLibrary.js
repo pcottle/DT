@@ -96,6 +96,36 @@ Edge.prototype.orientTest = function(point) {
     return orient2D(this.v1,this.v2,point);
 }
 
+Edge.prototype.getNeighborTris = function(inputLibrary) {
+    if(!inputLibrary)
+    {
+        inputLibrary = tLibrary;
+    }
+    result = inputLibrary.getTrisOnEdge(this);
+    return result;
+}
+
+Edge.prototype.numNeighbors = function() {
+    result = this.getNeighborTris();
+    return result.length;
+}
+
+Edge.prototype.convexPointTest = function(point) {
+    //ok so this edge has only one neighboring tri,
+    //and we want to see if this point is on the opposite side
+    var myNeighbors = this.getNeighborTris();
+    if(myNeighbors.length != 1)
+    {
+        throw new Error("did convex point test on an edge with multiple or 0 neighboring tris");
+    }
+    var otherPoint = myNeighbors[0].getThirdPoint(this);
+
+    //test if on same side
+    var ss = Triangle.prototype.sameSide;
+    return !ss(this.v1,this.v2,otherPoint,point);
+
+}
+
     
 function orient2D(pp,q,r) {
     var m1 = $M([
@@ -255,6 +285,19 @@ Triangle.prototype.generateId = function() {
     }
 
     this.id = startingId;
+}
+
+Triangle.prototype.getEdges = function() {
+    //make an edge for a->b, b->c, and c->a
+    var a = this.vertices[0];
+    var b = this.vertices[1];
+    var c = this.vertices[2];
+
+    var e1 = new Edge(a,b);
+    var e2 = new Edge(b,c);
+    var e3 = new Edge(c,a);
+
+    return [e1,e2,e3];
 }
 
 Triangle.prototype.getCircumcircle = function() {
@@ -466,6 +509,31 @@ triLibrary.prototype.getTrisOnEdge = function(edge) {
     return resultTris;
 }
 
+triLibrary.prototype.getEdgesWithOneTri = function() {
+    //horrible running time
+    var singleEdges = [];
+
+    for(var i = 0; i < this.tris.length; i++)
+    {
+        console.log("getting this tri");
+        var theseEdges = this.tris[i].getEdges();
+        for(var j = 0; j < theseEdges.length; j++)
+        {
+            var e = theseEdges[j];
+            console.log("this edge");
+            console.log("asd",e);
+            console.log(e.numNeighbors());
+            if(e.numNeighbors() == 1)
+            {
+                singleEdges.push(e);
+            }
+        }
+    }
+
+    return singleEdges;
+}
+
+
 triLibrary.prototype.deleteTri = function(tri) {
     for(var i = 0; i < this.tris.length; i++)
     {
@@ -479,10 +547,36 @@ triLibrary.prototype.deleteTri = function(tri) {
     throw new Error("error -- this library does not contain that tri");
 }
 
+function insertPointOutsideConvexHull(point,testLibrary) {
+    //ok so basically get all the singleton edges, and then see if they are
+    //visible, and if they are, connect them
+    if(!testLibrary)
+    {
+        testLibrary = tLibrary;
+    }
 
+    var singleEdges = tLibrary.getEdgesWithOneTri();
 
+    var edgesToConnect = [];
 
+    //find all the edges that are visible to me
+    for(var i = 0; i < singleEdges.length; i++)
+    {
+        var e = singleEdges[i];
+        if(e.convexPointTest(point))
+        {
+            edgesToConnect.push(e);
+        }
+    }
 
+    //connect all of these
+    for(var i = 0; i < edgesToConnect.length; i++)
+    {
+        var e = edgesToConnect[i];
+        var t = new Triangle(point,e.v1,e.v2);
+        tLibrary.addTri(t);
+    }
+}
 
 
 

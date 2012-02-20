@@ -57,7 +57,7 @@ function sketchProc(processing) {
         {
             pointBuffer[i].draw();
         }
-        tLibrary.drawAllTris(true);
+        tLibrary.drawAllTris(false);
     };
     
     processing.setup = function() {
@@ -72,6 +72,15 @@ function sketchProc(processing) {
 		   //p.mouseClicked();
         }
     };
+
+    processing.keyPressed = function() {
+
+        if(p.keyCode == 32) // space
+        {
+            var p1 = new Point(p.mouseX,p.mouseY);
+            insertPointOutsideConvexHull(p1);
+        }
+    }
     
     processing.mouseClicked = function() {
         //console.log("button" + p.mouseButton);
@@ -95,7 +104,7 @@ function sketchProc(processing) {
         }
         else if(p.mouseButton == 39)
         {
-            //middle 
+            //right click
             var p1 = new Point(p.mouseX,p.mouseY);
 
             tLibrary.highlightTrisContainingPoint(p1);
@@ -220,7 +229,7 @@ $j(document).ready(function(){
 
     //theTri = new Triangle(p3,p4,p5);
 
-    theEdge = new Edge(p1,p2);
+    //theEdge = new Edge(p1,p2);
     tLibrary = new triLibrary();
 
     var testFile = "12 2 0 0\n1 0 0\n2 0 3\n3 3 0\n 4 3 3\n5 1 1 \n 6 1 2\n7 2 1 \n 8 2 2 \n 9 0 1.5\n 10 1.5 0\n11 3 1.5\n 12 1.5 3";

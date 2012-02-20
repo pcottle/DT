@@ -288,6 +288,38 @@ Triangle.prototype.testInCircumcircle = function(testPoint) {
     return Circle.prototype.inCircle(this.vertices[0],this.vertices[1],this.vertices[2],testPoint);
 }
 
+Triangle.prototype.drawHighlighted = function() {
+
+    Point.prototype.highlightedPoint();
+    //draw the points
+    for(var i = 0; i < 3; i++)
+    {
+        var point = this.vertices[i].getScaledCoords();
+        point.draw();
+    }
+    
+    Segment.prototype.lightSegment();
+    for(var i = 0; i < 3; i++)
+    {
+        var next = i + 1;
+        if(next >= 3)
+        {
+            next = 0;
+        }
+        var p1 = this.vertices[i].getScaledCoords();
+        var p2 = this.vertices[next].getScaledCoords();
+        
+        p.line(p1.x,p1.y,p2.x,p2.y);
+    }
+    p.fill(p.color(133,143,255));
+    p.triangle( this.vertices[0].x,this.vertices[0].y,
+                this.vertices[1].x,this.vertices[1].y,
+                this.vertices[2].x,this.vertices[2].y);
+    p.noFill();
+}
+
+
+
 Triangle.prototype.draw = function() {
     //with scaled coordinates
     
@@ -402,10 +434,7 @@ triLibrary.prototype.drawAllTris = function(mode) {
         var thisTri = this.tris[i];
         if(this.highlightedTris[thisTri.id])
         {
-            p.fill(p.color(0,0,255));
-            console.log("its highlighted");
-            thisTri.draw();
-            p.noFill();
+            thisTri.drawHighlighted();
         }
         else if(mode)
         {

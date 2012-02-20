@@ -49,21 +49,61 @@ Vertex.prototype.getCoords = function() {
     return {'x':this.x,'y':this.y}
 }
 
+function Segment(p1,p2) {
+    this.p1 = p1;
+    this.p2 = p2;
+}
+
+Segment.prototype.lightSegment = function() {
+    p.strokeCap(p.ROUND);
+    p.colorMode(p.HSB);
+    p.strokeWeight(2);
+    p.stroke(p.color(100,100,100,200));
+}
+
+Segment.prototype.normalSegment = function() {
+    p.strokeCap(p.ROUND);
+    p.colorMode(p.RGB);
+    p.strokeWeight(4);
+    p.stroke(0,0,0);
+}
+
 function Edge(v1,v2) {
     this.v1 = v1;
     this.v2 = v2;
+
+    var ids = [v1.id,v2.id];
+    ids.sort();
+    this.id = String(ids[0]) + String(ids[1]);
 }
 
-
-
-
-
-
-function orient2D(v1,v2,v3) {
+Edge.prototype.draw = function() {
+    //now a line between each
+    Segment.prototype.normalSegment();
+    var c1 = this.v1.getScaledCoords();
+    var c2 = this.v2.getScaledCoords();
     
+    p.line(c1.x,c1.y,c2.x,c2.y);
 
+    //draw each point / vertex
+    Point.prototype.normalPoint();
+    this.v1.draw();
+    Point.prototype.highlightedPoint();
+    this.v2.draw();
+}
 
+Edge.prototype.orientTest = function(point) {
+    return orient2D(this.v1,this.v2,point);
+}
 
+    
+function orient2D(pp,q,r) {
+    var m1 = $M([
+        [pp.x - r.x, pp.y - r.y],
+        [q.x - r.x, q.y - r.y]
+    ]);
+    var det = m1.det() * -1;
+    return det;
 }
 
 
@@ -72,18 +112,39 @@ function Point(x,y) {
     this.y = y;
     
     this.strokeWidth = 2;
+    this.id = Math.round(Math.random()*1000);
 }
 
 Point.prototype.draw = function() {
+    var r = Point.prototype.drawSize;
+    p.ellipse(this.x,this.y,r,r);
 
-    p.point(this.x,this.y);
+    //p.point(this.x,this.y);
 }
+
+Point.prototype.normalSize = 8;
+Point.prototype.highlightSize = 8;
+Point.prototype.drawSize = 5;
 
 Point.prototype.getScaledCoords = function() {
     return this;
 }
 
+Point.prototype.highlightedPoint = function() {
+    Point.prototype.drawSize = Point.prototype.highlightSize;
+    p.colorMode(p.RGB);
+    p.strokeWeight(2);
+    p.stroke(p.color(0,21,255));
+    p.fill(p.color(133,143,255));
+}
 
+Point.prototype.normalPoint = function() {
+    Point.prototype.drawSize = Point.prototype.normalSize;
+    p.colorMode(p.RGB);
+    p.strokeWeight(2);
+    p.stroke(0,0,0);
+    p.fill(255,255,255);
+}
 
 
 function Circle(x,y,radius) {
@@ -129,6 +190,25 @@ Circle.prototype.testPointInside = function(testPoint) {
     return distance <= this.radius;
 }
 
+Circle.prototype.inCircle = function(a,b,c,d) {
+    var m = $M([
+        [a.x - d.x, a.y - d.y, Math.pow(a.x-d.x,2) + Math.pow(a.y-d.y,2)],
+        [b.x - d.x, b.y - d.y, Math.pow(b.x-d.x,2) + Math.pow(b.y-d.y,2)],
+        [c.x - d.x, c.y - d.y, Math.pow(c.x-d.x,2) + Math.pow(c.y-d.y,2)]
+    ]);
+
+    var det = m.det();
+    if(det > 0)
+    {
+        console.log("inside");
+    }
+    else
+    {
+        console.log("outside");
+    }
+    return det;
+}
+
 /*****************************
     The triangle holder library!
 
@@ -146,6 +226,14 @@ function Triangle(v1,v2,v3) {
     var rawVertices = [v1,v2,v3];
     this.vertices = rawVertices.sort(compareTwoVertices);
 
+    this.vertexMap = {};
+    for(var i = 0; i < 3; i++)
+    {
+        this.vertexMap[this.vertices[i].id] = true;
+    }
+
+    this.myCircumCircle = null;
+
     this.generateId();
 }
 
@@ -161,23 +249,30 @@ Triangle.prototype.generateId = function() {
     this.id = startingId;
 }
 
-Triangle.prototype.getCircumCircle = function() {
+Triangle.prototype.getCircumcircle = function() {
+    if(this.myCircumcircle)
+    {
+        return this.myCircumcircle;
+    }
+
     var v1 = this.vertices[0];
     var v2 = this.vertices[1];
     var v3 = this.vertices[2];
     
     var c = Circle.prototype.circleFromPoints(v1,v2,v3);
+    this.myCircumcircle = c;
     return c;
 }
 
-Triangle.prototype.testInCircumCircle = function(testPoint) {
-    var c = this.getCircumCircle();
-    return c.testPointInside(testPoint);
+Triangle.prototype.testInCircumcircle = function(testPoint) {
+    //do the geometric primitive
+    return Circle.prototype.inCircle(this.vertices[0],this.vertices[1],this.vertices[2],testPoint);
 }
 
 Triangle.prototype.draw = function() {
     //with scaled coordinates
     
+    Point.prototype.normalPoint();
     //draw the points
     for(var i = 0; i < 3; i++)
     {
@@ -185,34 +280,48 @@ Triangle.prototype.draw = function() {
         point.draw();
     }
     
-    for(var i = 0; i < 2; i++)
+    Segment.prototype.lightSegment();
+    for(var i = 0; i < 3; i++)
     {
+        var next = i + 1;
+        if(next >= 3)
+        {
+            next = 0;
+        }
         var p1 = this.vertices[i].getScaledCoords();
-        var p2 = this.vertices[i+1].getScaledCoords();
+        var p2 = this.vertices[next].getScaledCoords();
         
         p.line(p1.x,p1.y,p2.x,p2.y);
     }
-    
 }
 
-Triangle.prototype.drawCircumCircle = function() {
+Triangle.prototype.drawCircumcircle = function() {
     //with scaled coordinates
+    var c = this.getCircumcircle();
+    c.draw();
+}
 
+Triangle.prototype.drawBoth = function() {
+    this.drawCircumcircle();
+    this.draw();
+}
 
+Triangle.prototype.containsEdge(testEdge) {
+    var v1 = testEdge.v1;
+    var v2 = testEdge.v2;
+
+    return this.vertexMap[v1.id] && this.vertexMap[v2.id];
 }
 
 
+function triLibrary() {
+    this.tris = [];
 
+}
 
-
-
-
-
-
-
-
-
-
+triLibrary.prototype.addTri = function(tri) {
+    this.tris.push(tri);
+}
 
 
 

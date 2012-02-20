@@ -20,11 +20,11 @@ Mouse buttons (left, right, middle) to move the three points!
 
 $j = jQuery.noConflict();
 var fileText;
-var theta = 0;
 var canvas;
 var p;
-var point1,point2,point3;
-var circle;
+
+var theEdge = null;
+var theTri = null;
 
 var allVertices = {};
 var allLinks = {};
@@ -46,57 +46,12 @@ function sketchProc(processing) {
         // erase background
         p.background(224);
         
-        //calc the circle thing
-        theta += 0.007;
-        //theta = 0;
-        
-        var y = (Math.sin(theta)/2 + 0.5) * p.height * 0.8 + 0.1 * p.height;
-        point2.y = y;
-        var x = (Math.cos(theta*1.333)/2 + 0.5) * p.width * 0.8 + 0.1 * p.width;
-        point3.x = x;
-        
-        var newC = Circle.prototype.circleFromPoints(point1,point2,point3);
-        //only reassign if valid triangle
-        if(newC) { circle = newC; }
-        
-        p.strokeWeight(4);
-        //p.noFill();
-        circle.draw();
-            
-        p.strokeWeight(8);
-        p.stroke(p.color(255,0,0));
-        point1.draw();
-        p.stroke(p.color(0,255,0));
-        point2.draw();
-        p.stroke(p.color(0,0,255));
-        point3.draw();
-
-        p.stroke(p.color(0,0,0,50));
-        p.strokeWeight(2);
-        p.line(point1.x,point1.y,point2.x,point2.y);
-        p.line(point2.x,point2.y,point3.x,point3.y);
-        p.line(point3.x,point3.y,point1.x,point1.y);
-
-
-        p.strokeWeight(8);
-        p.stroke(p.color(0,0,0,255));
-        
-        
-        //draw the actual DT stuff
-        for(key in allVertices)
+        if(theEdge)
+        { theEdge.draw(); }
+        if(theTri)
         {
-            allVertices[key].draw();
+            theTri.drawBoth();
         }
-
-        p.strokeWeight(2);
-        for(key in allLinks)
-        {
-            var l = allLinks[key];
-
-            l.draw();
-        }
-        
-
     };
     
     processing.setup = function() {
@@ -118,27 +73,37 @@ function sketchProc(processing) {
         if(p.mouseButton == 37)
         {
             //left click
-            setPointPos(point1,p.mouseX,p.mouseY);
-        }
-        else if(p.mouseButton == 3)
-        {
-            //right click
-            setPointPos(point2,p.mouseX,p.mouseY);
+            //make a new point here, test the left or right test
+            var p1 = new Point(p.mouseX,p.mouseY);
+            console.log("Testing to left or right....");
+            var test = theEdge.orientTest(p1);
+            if(test > 0)
+            {
+                console.log("to left");
+            }
+            else
+            {
+                console.log("to right");
+            }
+            return;
         }
         else if(p.mouseButton == 39)
         {
+            //middle 
+            var p1 = new Point(p.mouseX,p.mouseY);
+            var test = theTri.testInCircumcircle(p1);
+            console.log(test);
+
+        }
+        else if(p.mouseButton == 3)
+        {
             //middle click? this is actually right
-            setPointPos(point3,p.mouseX,p.mouseY);
+
         }
 
     };
 }
 
-function setPointPos(point,x,y)
-{
-	point.x = x;
-	point.y = y;
-}
 
 function loadFile()
 {
@@ -241,11 +206,15 @@ $j(document).ready(function(){
     canvas = document.getElementById("canvas1");
     p = new Processing(canvas, sketchProc);
     
-    point1 = new Point(p.random(0,p.width),p.random(0,p.height));
-    point2 = new Point(p.random(0,p.width),p.random(0,p.height));
-    point3 = new Point(p.random(0,p.width),p.random(0,p.height));
+    var p1 = randPoint();
+    var p2 = randPoint();
+    
+    var p3 = randPoint();
+    var p4 = randPoint();
+    var p5 = randPoint();
 
-    circle = new Circle(0,0,0);
+    theTri = new Triangle(p3,p4,p5);
+    theEdge = new Edge(p1,p2);
 
     var testFile = "12 2 0 0\n1 0 0\n2 0 3\n3 3 0\n 4 3 3\n5 1 1 \n 6 1 2\n7 2 1 \n 8 2 2 \n 9 0 1.5\n 10 1.5 0\n11 3 1.5\n 12 1.5 3";
     $j('#inputFile').val(testFile);

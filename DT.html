@@ -25,6 +25,7 @@ var p;
 
 var theEdge = null;
 var theTri = null;
+var pointBuffer = [];
 
 var allVertices = {};
 var allLinks = {};
@@ -52,6 +53,11 @@ function sketchProc(processing) {
         {
             theTri.drawBoth();
         }
+        for(var i = 0; i < pointBuffer.length; i++)
+        {
+            pointBuffer[i].draw();
+        }
+        tLibrary.drawAllTris(true);
     };
     
     processing.setup = function() {
@@ -63,7 +69,7 @@ function sketchProc(processing) {
     processing.mouseDragged = function() {
 	    if(p.__mousePressed)
         {
-		   p.mouseClicked();
+		   //p.mouseClicked();
         }
     };
     
@@ -75,25 +81,24 @@ function sketchProc(processing) {
             //left click
             //make a new point here, test the left or right test
             var p1 = new Point(p.mouseX,p.mouseY);
-            console.log("Testing to left or right....");
-            var test = theEdge.orientTest(p1);
-            if(test > 0)
+
+            pointBuffer.push(p1);
+            if(pointBuffer.length == 3)
             {
-                console.log("to left");
+                p1 = pointBuffer[0];
+                p2 = pointBuffer[1];
+                p3 = pointBuffer[2];
+                pointBuffer = [];
+                var tri = new Triangle(p1,p2,p3);
+                tLibrary.addTri(tri);
             }
-            else
-            {
-                console.log("to right");
-            }
-            return;
         }
         else if(p.mouseButton == 39)
         {
             //middle 
             var p1 = new Point(p.mouseX,p.mouseY);
-            var test = theTri.testInCircumcircle(p1);
-            console.log(test);
 
+            tLibrary.highlightTrisContainingPoint(p1);
         }
         else if(p.mouseButton == 3)
         {
@@ -213,8 +218,10 @@ $j(document).ready(function(){
     var p4 = randPoint();
     var p5 = randPoint();
 
-    theTri = new Triangle(p3,p4,p5);
+    //theTri = new Triangle(p3,p4,p5);
+
     theEdge = new Edge(p1,p2);
+    tLibrary = new triLibrary();
 
     var testFile = "12 2 0 0\n1 0 0\n2 0 3\n3 3 0\n 4 3 3\n5 1 1 \n 6 1 2\n7 2 1 \n 8 2 2 \n 9 0 1.5\n 10 1.5 0\n11 3 1.5\n 12 1.5 3";
     $j('#inputFile').val(testFile);

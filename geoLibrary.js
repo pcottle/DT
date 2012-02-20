@@ -172,13 +172,20 @@ Circle.prototype.circleFromPoints = function (p1,p2,p3) {
 
 	if(Math.abs(slope1 - slope2) < 0.01)
 	{
-		eraseCircle();
+        throw new Error("that circumcirlce is invalid, points are on top of each other");
 		return;
 	}
+
 	var centerX = (slope1 * slope2 * (p3.y - p1.y) + slope1*(p2.x + p3.x) - slope2*(p1.x + p2.x))/(2*(slope1-slope2));
 	var centerY = -1/slope1 * (centerX - (p1.x + p2.x)/2) + (p1.y + p2.y)/2;
 	var radius = p.dist(centerX,centerY,p2.x,p2.y);
-
+    
+    if(!centerX || !centerY || !radius)
+    {
+        console.log("warning -- invalid circumcircle");
+        return null;
+        throw new Error("invalid circumcircle, center or radius is undefined");
+    }
     var c = new Circle(centerX,centerY,radius);
     return c;
 }
@@ -225,6 +232,7 @@ function compareTwoVertices(a,b) {
 function Triangle(v1,v2,v3) {
     var rawVertices = [v1,v2,v3];
     this.vertices = rawVertices.sort(compareTwoVertices);
+    this.hasGeneratedCircle = false;
 
     this.vertexMap = {};
     for(var i = 0; i < 3; i++)
@@ -250,10 +258,11 @@ Triangle.prototype.generateId = function() {
 }
 
 Triangle.prototype.getCircumcircle = function() {
-    if(this.myCircumcircle)
+    if(this.hasGeneratedCircle)
     {
         return this.myCircumcircle;
     }
+    this.hasGeneratedCircle = true;
 
     var v1 = this.vertices[0];
     var v2 = this.vertices[1];
@@ -262,6 +271,16 @@ Triangle.prototype.getCircumcircle = function() {
     var c = Circle.prototype.circleFromPoints(v1,v2,v3);
     this.myCircumcircle = c;
     return c;
+}
+
+Triangle.prototype.sameSide = function(p,q,r,testPoint) {
+    triResult = orient2D(p,q,r);
+    triSign = Math.round(triResult / Math.abs(triResult));
+
+    pointResult = orient2D(p,q,testPoint);
+    pointSign = Math.round(pointResult / Math.abs(pointResult));
+
+    return pointSign == triSign;
 }
 
 Triangle.prototype.testInCircumcircle = function(testPoint) {
@@ -298,7 +317,10 @@ Triangle.prototype.draw = function() {
 Triangle.prototype.drawCircumcircle = function() {
     //with scaled coordinates
     var c = this.getCircumcircle();
-    c.draw();
+    if(c)
+    {
+        c.draw();
+    }
 }
 
 Triangle.prototype.drawBoth = function() {
@@ -306,21 +328,126 @@ Triangle.prototype.drawBoth = function() {
     this.draw();
 }
 
-Triangle.prototype.containsEdge(testEdge) {
+Triangle.prototype.containsEdge = function(testEdge) {
     var v1 = testEdge.v1;
     var v2 = testEdge.v2;
 
     return this.vertexMap[v1.id] && this.vertexMap[v2.id];
 }
 
+Triangle.prototype.getThirdPoint = function(testEdge) {
+    var v1 = testEdge.v1;
+    var v2 = testEdge.v2;
+    if(!this.vertexMap[v1.id] || !this.vertexMap[v2.id])
+    {
+        throw new Error("error! asked for a third point when edge points not here");
+    }
+
+    for(var i = 0; i < 3; i++)
+    {
+        var myV = this.vertices[i];
+        if(myV.id != v1.id && myV.id != v2.id)
+        {
+            return myV;
+        }
+    }
+}
+
+Triangle.prototype.containsPoint = function(testPoint) {
+    var a = this.vertices[0];
+    var b = this.vertices[1];
+    var c = this.vertices[2];
+
+    //not too bad -- just do the sameside test for all
+    var ss = Triangle.prototype.sameSide;
+
+    return ss(a,b,c,testPoint) && ss(b,c,a,testPoint) && ss(c,a,b,testPoint);
+}
+
 
 function triLibrary() {
     this.tris = [];
-
+    this.highlightedTris = {};
 }
 
 triLibrary.prototype.addTri = function(tri) {
     this.tris.push(tri);
+}
+
+triLibrary.prototype.highlightTri = function(tri) {
+    this.highlightedTris[tri.id] = true;
+}
+
+triLibrary.prototype.highlightTrisContainingPoint = function(point) {
+    for(var i = 0; i < this.tris.length; i++)
+    {
+        var thisTri = this.tris[i];
+        if(thisTri.containsPoint(point))
+        {
+            if(this.highlightedTris[thisTri.id])
+            {
+                this.highlightedTris[thisTri.id] = false;
+            }
+            else
+            {
+                this.highlightedTris[thisTri.id] = true;
+            }
+        }
+    }
+}
+
+triLibrary.prototype.drawAllTris = function(mode) {
+    for(var i = 0; i < this.tris.length; i++)
+    {
+        var thisTri = this.tris[i];
+        if(this.highlightedTris[thisTri.id])
+        {
+            p.fill(p.color(0,0,255));
+            console.log("its highlighted");
+            thisTri.draw();
+            p.noFill();
+        }
+        else if(mode)
+        {
+            thisTri.drawBoth();
+        }
+        else
+        {
+            thisTri.draw();
+        }
+    }
+}
+
+triLibrary.prototype.getTrisOnEdge = function(edge) {
+    resultTris = [];
+    for(var i = 0; i < this.tris.length; i++)
+    {
+        var thisTri = this.tris[i];
+        if(thisTri.containsEdge(edge))
+        {
+            resultTris.push(thisTri);
+        }
+    }
+
+    if(resultTris.length > 2)
+    {
+        throw new Error("Error -- more than 2 tries on an edge");
+    }
+
+    return resultTris;
+}
+
+triLibrary.prototype.deleteTri = function(tri) {
+    for(var i = 0; i < this.tris.length; i++)
+    {
+        var thisTri = this.tris[i];
+        if(thisTri.id == tri.id)
+        {
+            this.tris.splice(i,1);
+            return;
+        }
+    }
+    throw new Error("error -- this library does not contain that tri");
 }
 
 

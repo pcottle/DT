@@ -9,6 +9,7 @@
 <p>
 click to add points, spacebar afterwards for faster insertion
 <button onclick="javascript:drawMode = !drawMode">Draw mode</button>
+<button onclick="javascript:randomPoints()">Random Points</button>
 </p>
 <link href="style.css" rel="stylesheet" type="text/css"/>
 
@@ -27,7 +28,7 @@ var p;
 var theEdge = null;
 var theTri = null;
 var pointBuffer = [];
-var drawMode = false;
+var drawMode = true;
 
 var allVertices = {};
 var allLinks = {};
@@ -57,7 +58,7 @@ function sketchProc(processing) {
         }
         for(var i = 0; i < pointBuffer.length; i++)
         {
-            pointBuffer[i].draw();
+            //pointBuffer[i].draw();
         }
         //draw mode
         tLibrary.drawAllTris(drawMode);
@@ -129,6 +130,13 @@ function sketchProc(processing) {
     };
 }
 
+function randomPoints()
+{
+	var p1 = randPoint();
+	insertAnyPoint(p1);
+
+	setTimeout("randomPoints()",200);
+}
 
 function loadFile()
 {
@@ -233,15 +241,16 @@ $j(document).ready(function(){
     
     var p1 = randPoint();
     var p2 = randPoint();
+	var p3 = randPoint();
     
-    var p3 = randPoint();
-    var p4 = randPoint();
-    var p5 = randPoint();
-
-    //theTri = new Triangle(p3,p4,p5);
+    theTri = new Triangle(p1,p2,p3);
 
     //theEdge = new Edge(p1,p2);
     tLibrary = new triLibrary();
+	tLibrary.addTri(theTri);
+	pointBuffer.length = 3;
+	randomPoints();
+
 
     var testFile = "12 2 0 0\n1 0 0\n2 0 3\n3 3 0\n 4 3 3\n5 1 1 \n 6 1 2\n7 2 1 \n 8 2 2 \n 9 0 1.5\n 10 1.5 0\n11 3 1.5\n 12 1.5 3";
     $j('#inputFile').val(testFile);

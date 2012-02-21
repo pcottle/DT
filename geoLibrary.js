@@ -236,14 +236,33 @@ Circle.prototype.inCircle = function(a,b,c,d) {
         [c.x - d.x, c.y - d.y, Math.pow(c.x-d.x,2) + Math.pow(c.y-d.y,2)]
     ]);
 
+	var pointInside = {};
+	pointInside['x'] = (1/3) * (a.x + b.x + c.x);
+	pointInside['y'] = (1/3) * (a.y + b.y + c.y);
+
+	var mTest = $M([
+        [a.x - pointInside.x, a.y - pointInside.y, Math.pow(a.x-pointInside.x,2) + Math.pow(a.y-pointInside.y,2)],
+        [b.x - pointInside.x, b.y - pointInside.y, Math.pow(b.x-pointInside.x,2) + Math.pow(b.y-pointInside.y,2)],
+        [c.x - pointInside.x, c.y - pointInside.y, Math.pow(c.x-pointInside.x,2) + Math.pow(c.y-pointInside.y,2)]
+    ]);
+
     var det = m.det();
+	var detTest = mTest.det();
+
+	var detSign = Math.round(det / Math.abs(det));
+	var testSign = Math.round(detTest / Math.abs(detTest));
+
+	return detSign == testSign;
+
     if(det > 0)
     {
-        console.log("inside");
+        //console.log("inside");
+		return true;
     }
     else
     {
-        console.log("outside");
+        //console.log("outside");
+		return false;
     }
     return det;
 }
@@ -300,6 +319,37 @@ Triangle.prototype.getEdges = function() {
     var e3 = new Edge(c,a);
 
     return [e1,e2,e3];
+}
+
+Triangle.prototype.getNeighborTris = function() {
+	//essentially for each edge, get their neighbors,
+	//and then reduce and remove yourself and return
+	
+	var myEdges = this.getEdges();
+
+	var allTris = {};
+
+	for(var i = 0; i < myEdges.length; i++)
+	{
+		var e = myEdges[i];
+		var nTris = e.getNeighborTris();
+		for(var j = 0; j < nTris.length; j++)
+		{
+			var t = nTris[j];
+			allTris[t.id] = t;
+		}
+	}
+	//ok so now return the ones that aren't you
+	var toReturn = [];
+	for(key in allTris)
+	{
+		if(key != this.id)
+		{
+			toReturn.push(allTris[key]);
+		}
+	}
+
+	return toReturn;
 }
 
 Triangle.prototype.getCircumcircle = function() {
@@ -545,7 +595,6 @@ triLibrary.prototype.getEdgesWithOneTri = function() {
         for(var j = 0; j < theseEdges.length; j++)
         {
             var e = theseEdges[j];
-            console.log(e.numNeighbors());
             if(e.numNeighbors() == 1)
             {
                 singleEdges.push(e);
@@ -570,6 +619,30 @@ triLibrary.prototype.deleteTri = function(tri) {
     throw new Error("error -- this library does not contain that tri");
 }
 
+function recursiveTriSearch(thisTri,checkedTris,trisToDelete,point)
+{
+	//ok return if you're already in here
+	console.log("searching this tri",thisTri);
+	if(checkedTris[thisTri.id])
+	{return;}
+	checkedTris[thisTri.id] = true;
+	
+	var testResult = thisTri.testInCircumcircle(point);
+	console.log("in or out",testResult);
+	if(!testResult)
+	{ return; }
+	//we contain it! so go add ourselves and search onwards
+	trisToDelete.push(thisTri);
+
+	var myNeighbors = thisTri.getNeighborTris();
+	for(var i = 0; i < myNeighbors.length; i++)
+	{
+		recursiveTriSearch(myNeighbors[i],checkedTris,trisToDelete,point);
+	}
+	//should be done here, go ahead and return
+	return;
+}
+
 function insertPointInsideTri(seedTri,point) {
     //by definition, the point is inside the triangle so
     //its inside the triangle's circumcirlce
@@ -579,72 +652,53 @@ function insertPointInsideTri(seedTri,point) {
     //etc
 
     checkedTris = {};
-    checkedEdges = {};
-
     trisToDelete = [];
     edgesToJoin = [];
 
-    edgesToCheck = [];
+	//search off of this seed tri	
+	recursiveTriSearch(seedTri,checkedTris,trisToDelete,point);
+	console.log("done searching");
+	console.log(trisToDelete);
+	
+	edgeCount = {};
+	edgeMap = {};
 
-    //add this initial triangle
-    trisToDelete.push(seedTri);
-    checkedTris[seedTri.id] = true;
-
-    edgesToCheck = edgesToCheck.concat(seedTri.getEdges());
-
-    while(edgesToCheck.length > 0)
-    {
-        //pop an edge to check
-        var edge = edgesToCheck.pop();
-        if(checkedEdges[edge.id])
-        {
-            continue;
-        }
-        checkedEdges[edge.id] = true;
-        console.log("checking this edge",edge);
-
-        //for this edge, check if neighboring tris contain this point
-        neighborTris = edge.getNeighborTris();
-
-        var neighborContains = false;
-
-        //examine neighbor triangles
-        for(var i = 0; i < neighborTris.length; i++)
-        {
-            var tri = neighborTris[i];
-            if(!checkedTris[tri.id])
-            {
-                checkedTris[tri.id] = true;
-
-                //see if it contains this point
-                if(tri.testInCircumcircle(point))
-                {
-                    //it needs to be deleted, so add it to the list and push
-                    //the edges here
-                    trisToDelete.push(tri);
-                    neighborContains = true;
-                    edgesToCheck = edgesToCheck.concat(tri.getEdges());
-                }
-            }
-        }
-        //if our neighbors were good, we want to join this edge
-        if(!neighborContains)
-        {
-            edgesToJoin.push(edge);
-        }
-        //else, we need to delete this tri and add its edges to the queue, which we just did
-
-    }
-
-    //ok now we have edges to join, go make a bunch of triangles and delete these triangles
+	//we need to find the cavity formed by these triangles. the cavity is essentially
+	//the edges that only appear once. we will use an edge mapper
     for(var i = 0; i < trisToDelete.length; i++)
     {
-        tLibrary.deleteTri(trisToDelete[i]);
+		//get the edges for this tri
+		var edges = trisToDelete[i].getEdges();
+		for(var j = 0; j < edges.length; j++)
+		{
+			//store edge count
+			var e = edges[j];
+			//if we havent seen this one yet
+			if(!edgeCount[e.id])
+			{
+				edgeMap[e.id] = e;
+				edgeCount[e.id] = 1;
+			}
+			else
+			{
+				edgeCount[e.id] = edgeCount[e.id] + 1;
+			}
+		}
+		tLibrary.deleteTri(trisToDelete[i]);
     }
 
+	//ok now go through and see which edges are only there once
+	edgesToJoin = [];
+	for(key in edgeCount)
+	{
+		var count = edgeCount[key];
+		if(count == 1)
+		{
+			edgesToJoin.push(edgeMap[key]);
+		}
+	}
     //make triangles with our edges
     joinAllEdgesToPoint(edgesToJoin,point,drawMode);
-
 }
 
 function insertAnyPoint(point,testLibrary) {
@@ -739,5 +793,6 @@ Link.prototype.drawEdges = function() {
         p.line(myX,myY,x,y);
     }
 }
+
 
 

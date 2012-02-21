@@ -5,9 +5,10 @@
   <title>Delauney Triangulation</title>
   
 <body>
-<h2>Circumcircles</h2>
+	<h2>DelaunAy triangulation!</h2>
 <p>
-Mouse buttons (left, right, middle) to move the three points!
+click to add points, spacebar afterwards for faster insertion
+<button onclick="javascript:drawMode = !drawMode">Draw mode</button>
 </p>
 <link href="style.css" rel="stylesheet" type="text/css"/>
 
@@ -107,6 +108,10 @@ function sketchProc(processing) {
                 var tri = new Triangle(p1,p2,p3);
                 tLibrary.addTri(tri);
             }
+	    else
+	    {
+		insertAnyPoint(p1);
+	    }
         }
         else if(p.mouseButton == 39)
         {

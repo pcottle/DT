@@ -529,6 +529,20 @@ triLibrary.prototype.getTriContainingPoint = function(point) {
     return null;
 }
 
+triLibrary.prototype.getAllTrisWithPointInCircumcircle = function(point) {
+
+	toReturn = [];
+	
+	for(var i = 0; i < this.tris.length; i++)
+	{
+		if(this.tris[i].testInCircumcircle(point))
+		{
+			toReturn.push(this.tris[i]);
+		}
+	}
+	return toReturn;
+}
+
 triLibrary.prototype.highlightTrisContainingPoint = function(point) {
     for(var i = 0; i < this.tris.length; i++)
     {
@@ -622,13 +636,12 @@ triLibrary.prototype.deleteTri = function(tri) {
 function recursiveTriSearch(thisTri,checkedTris,trisToDelete,point)
 {
 	//ok return if you're already in here
-	console.log("searching this tri",thisTri);
 	if(checkedTris[thisTri.id])
 	{return;}
 	checkedTris[thisTri.id] = true;
 	
 	var testResult = thisTri.testInCircumcircle(point);
-	console.log("in or out",testResult);
+
 	if(!testResult)
 	{ return; }
 	//we contain it! so go add ourselves and search onwards
@@ -656,9 +669,9 @@ function insertPointInsideTri(seedTri,point) {
     edgesToJoin = [];
 
 	//search off of this seed tri	
+	//TODO
 	recursiveTriSearch(seedTri,checkedTris,trisToDelete,point);
-	console.log("done searching");
-	console.log(trisToDelete);
+	//trisToDelete = tLibrary.getAllTrisWithPointInCircumcircle(point);
 	
 	edgeCount = {};
 	edgeMap = {};
@@ -698,7 +711,7 @@ function insertPointInsideTri(seedTri,point) {
 		}
 	}
     //make triangles with our edges
-    joinAllEdgesToPoint(edgesToJoin,point,drawMode);
+    joinAllEdgesToPoint(edgesToJoin,point);
 }
 
 function insertAnyPoint(point,testLibrary) {
@@ -743,22 +756,14 @@ function insertPointOutsideConvexHull(point,testLibrary) {
 }
 
 
-function joinAllEdgesToPoint(edgesToConnect,point,switcher)
+function joinAllEdgesToPoint(edgesToConnect,point)
 {
-    //TODO
     //connect all of these
     for(var i = 0; i < edgesToConnect.length; i++)
     {
         var e = edgesToConnect[i];
-        if(switcher)
-        {
-            highlightedEdges.push(e);
-        }
-        else
-        {
         var t = new Triangle(point,e.v1,e.v2);
         tLibrary.addTri(t);
-        }
     }
 }
 

@@ -26,6 +26,7 @@ var p;
 var theEdge = null;
 var theTri = null;
 var pointBuffer = [];
+var drawMode = false;
 
 var allVertices = {};
 var allLinks = {};
@@ -57,7 +58,12 @@ function sketchProc(processing) {
         {
             pointBuffer[i].draw();
         }
-        tLibrary.drawAllTris(false);
+        //draw mode
+        tLibrary.drawAllTris(drawMode);
+        for(key in highlightedEdges)
+        {
+            highlightedEdges[key].draw();
+        }
     };
     
     processing.setup = function() {
@@ -78,7 +84,7 @@ function sketchProc(processing) {
         if(p.keyCode == 32) // space
         {
             var p1 = new Point(p.mouseX,p.mouseY);
-            insertPointOutsideConvexHull(p1);
+            insertAnyPoint(p1);
         }
     }
     
@@ -97,7 +103,7 @@ function sketchProc(processing) {
                 p1 = pointBuffer[0];
                 p2 = pointBuffer[1];
                 p3 = pointBuffer[2];
-                pointBuffer = [];
+                //pointBuffer = [];
                 var tri = new Triangle(p1,p2,p3);
                 tLibrary.addTri(tri);
             }

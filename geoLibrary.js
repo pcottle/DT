@@ -9,6 +9,8 @@ function randPoint() {
     return new Point(x,y);
 }
 
+highlightedEdges = [];
+
 
 
 /************************
@@ -187,7 +189,7 @@ Circle.prototype.draw = function() {
     p.colorMode(p.HSB);
     
     p.stroke(0,0,255);
-    p.fill(p.map(this.radius,0,300,0,255),255,p.dist(0,0,this.x,this.y)*50);
+    p.fill(p.map(this.radius,0,300,0,255),255,p.dist(0,0,this.x,this.y)*50,50);
 
 	p.ellipse(this.x,this.y,this.radius*2,this.radius*2);
     p.colorMode(p.RGB);
@@ -449,8 +451,32 @@ triLibrary.prototype.addTri = function(tri) {
     this.tris.push(tri);
 }
 
+triLibrary.prototype.highlightTriById = function(triId) {
+    this.highlightedTris[triId] = true;
+}
+
 triLibrary.prototype.highlightTri = function(tri) {
     this.highlightedTris[tri.id] = true;
+}
+
+triLibrary.prototype.pointInsideAnyTri = function(point) {
+    if(this.getTriContainingPoint(point))
+    {
+        return true;
+    }
+    return false;
+}
+
+triLibrary.prototype.getTriContainingPoint = function(point) {
+
+    for(var i = 0; i < this.tris.length; i++)
+    {
+        if(this.tris[i].containsPoint(point))
+        {
+            return this.tris[i];
+        }
+    }
+    return null;
 }
 
 triLibrary.prototype.highlightTrisContainingPoint = function(point) {
@@ -515,13 +541,10 @@ triLibrary.prototype.getEdgesWithOneTri = function() {
 
     for(var i = 0; i < this.tris.length; i++)
     {
-        console.log("getting this tri");
         var theseEdges = this.tris[i].getEdges();
         for(var j = 0; j < theseEdges.length; j++)
         {
             var e = theseEdges[j];
-            console.log("this edge");
-            console.log("asd",e);
             console.log(e.numNeighbors());
             if(e.numNeighbors() == 1)
             {
@@ -547,6 +570,102 @@ triLibrary.prototype.deleteTri = function(tri) {
     throw new Error("error -- this library does not contain that tri");
 }
 
+function insertPointInsideTri(seedTri,point) {
+    //by definition, the point is inside the triangle so
+    //its inside the triangle's circumcirlce
+
+    //we will have a few things... a closed set of edges
+    //that we have checked, a closed set of tris that we have checked,
+    //etc
+
+    checkedTris = {};
+    checkedEdges = {};
+
+    trisToDelete = [];
+    edgesToJoin = [];
+
+    edgesToCheck = [];
+
+    //add this initial triangle
+    trisToDelete.push(seedTri);
+    checkedTris[seedTri.id] = true;
+
+    edgesToCheck = edgesToCheck.concat(seedTri.getEdges());
+
+    while(edgesToCheck.length > 0)
+    {
+        //pop an edge to check
+        var edge = edgesToCheck.pop();
+        if(checkedEdges[edge.id])
+        {
+            continue;
+        }
+        checkedEdges[edge.id] = true;
+        console.log("checking this edge",edge);
+
+        //for this edge, check if neighboring tris contain this point
+        neighborTris = edge.getNeighborTris();
+
+        var neighborContains = false;
+
+        //examine neighbor triangles
+        for(var i = 0; i < neighborTris.length; i++)
+        {
+            var tri = neighborTris[i];
+            if(!checkedTris[tri.id])
+            {
+                checkedTris[tri.id] = true;
+                console.log("checking this triangle");
+                console.log("t",tri);
+
+                //see if it contains this point
+                if(tri.testInCircumcircle(point))
+                {
+                    //it needs to be deleted, so add it to the list and push
+                    //the edges here
+                    trisToDelete.push(tri);
+                    neighborContains = true;
+                    edgesToCheck = edgesToCheck.concat(tri.getEdges());
+                }
+            }
+        }
+        //if our neighbors were good, we want to join this edge
+        if(!neighborContains)
+        {
+            edgesToJoin.push(edge);
+        }
+        //else, we need to delete this tri and add its edges to the queue, which we just did
+
+    }
+
+    //ok now we have edges to join, go make a bunch of triangles and delete these triangles
+    for(var i = 0; i < trisToDelete.length; i++)
+    {
+        tLibrary.deleteTri(trisToDelete[i]);
+    }
+
+    //make triangles with our edges
+    joinAllEdgesToPoint(edgesToJoin,point);
+
+}
+
+function insertAnyPoint(point,testLibrary) {
+    if(!testLibrary)
+    {
+        testLibrary = tLibrary;
+    }
+    //see if theres a tri containing this point
+    var result = testLibrary.getTriContainingPoint(point);
+    if(result)
+    {
+        insertPointInsideTri(result,point);
+    }
+    else
+    {
+        insertPointOutsideConvexHull(point,testLibrary);
+    }
+}
+
 function insertPointOutsideConvexHull(point,testLibrary) {
     //ok so basically get all the singleton edges, and then see if they are
     //visible, and if they are, connect them
@@ -568,11 +687,18 @@ function insertPointOutsideConvexHull(point,testLibrary) {
             edgesToConnect.push(e);
         }
     }
+    joinAllEdgesToPoint(edgesToConnect,point);
+}
 
+
+function joinAllEdgesToPoint(edgesToConnect,point)
+{
+    //TODO
     //connect all of these
     for(var i = 0; i < edgesToConnect.length; i++)
     {
         var e = edgesToConnect[i];
+        highlightedEdges.push(e);
         var t = new Triangle(point,e.v1,e.v2);
         tLibrary.addTri(t);
     }

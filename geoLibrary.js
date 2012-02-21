@@ -615,6 +615,8 @@ function insertPointInsideTri(seedTri,point) {
             if(!checkedTris[tri.id])
             {
                 checkedTris[tri.id] = true;
+                console.log("checking this triangle");
+                console.log("t",tri);
 
                 //see if it contains this point
                 if(tri.testInCircumcircle(point))
@@ -643,7 +645,7 @@ function insertPointInsideTri(seedTri,point) {
     }
 
     //make triangles with our edges
-    joinAllEdgesToPoint(edgesToJoin,point,drawMode);
+    joinAllEdgesToPoint(edgesToJoin,point);
 
 }
 
@@ -689,22 +691,16 @@ function insertPointOutsideConvexHull(point,testLibrary) {
 }
 
 
-function joinAllEdgesToPoint(edgesToConnect,point,switcher)
+function joinAllEdgesToPoint(edgesToConnect,point)
 {
     //TODO
     //connect all of these
     for(var i = 0; i < edgesToConnect.length; i++)
     {
         var e = edgesToConnect[i];
-        if(switcher)
-        {
-            highlightedEdges.push(e);
-        }
-        else
-        {
+        highlightedEdges.push(e);
         var t = new Triangle(point,e.v1,e.v2);
         tLibrary.addTri(t);
-        }
     }
 }
 

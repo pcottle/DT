@@ -239,13 +239,11 @@ Circle.prototype.inCircle = function(a,b,c,d) {
     var det = m.det();
     if(det > 0)
     {
-        //console.log("inside");
-        return true;
+        console.log("inside");
     }
     else
     {
-        return false;
-        //console.log("outside");
+        console.log("outside");
     }
     return det;
 }
@@ -608,26 +606,29 @@ function insertPointInsideTri(seedTri,point) {
         //for this edge, check if neighboring tris contain this point
         neighborTris = edge.getNeighborTris();
 
-        var numContains = 0;
+        var neighborContains = false;
 
         //examine neighbor triangles
         for(var i = 0; i < neighborTris.length; i++)
         {
             var tri = neighborTris[i];
-
-            //see if it contains this point
-            if(tri.testInCircumcircle(point))
+            if(!checkedTris[tri.id])
             {
-                //it needs to be deleted, so add it to the list and push
-                //the edges here
-                trisToDelete.push(tri);
-                numContains++;
-                neighborContains = true;
-                edgesToCheck = edgesToCheck.concat(tri.getEdges());
+                checkedTris[tri.id] = true;
+
+                //see if it contains this point
+                if(tri.testInCircumcircle(point))
+                {
+                    //it needs to be deleted, so add it to the list and push
+                    //the edges here
+                    trisToDelete.push(tri);
+                    neighborContains = true;
+                    edgesToCheck = edgesToCheck.concat(tri.getEdges());
+                }
             }
         }
         //if our neighbors were good, we want to join this edge
-        if(numContains != 2)
+        if(!neighborContains)
         {
             edgesToJoin.push(edge);
         }

@@ -633,6 +633,95 @@ triLibrary.prototype.deleteTri = function(tri) {
     throw new Error("error -- this library does not contain that tri");
 }
 
+function doFlipAlgorithmWithTris(trisToStart)
+{
+	var checkedEdges = {};
+	var edgeQueue = [];
+
+	for(var i = 0; i < trisToStart.length; i++)
+	{
+		var t = trisToStart[i];
+		edgeQueue = edgeQueue.concat(t.getEdges());
+	}
+	//now all edges are in buffer... start the checking process
+	while(edgeQueue.length > 0)
+	{
+		var e = edgeQueue.pop();
+		if(checkedEdges[e.id])
+		{ continue; }
+
+		checkedEdges[e.id] = true;
+
+		//check if should flip
+		if(!shouldFlip(e))
+		{ continue; }
+
+		//ok now we for sure have to flip this edge
+		//so we might need to check it again
+		checkedEdges[e.id] = false;
+
+		//do the flip, and get a list of tris created
+		var trisCreated = doFlip(e);
+
+		for(var i = 0; i < trisCreated.length; i++)
+		{
+			edgeQueue = edgeQueue.concat(trisCreated[i].getEdges());
+		}
+		//done
+	}
+}
+
+function shouldFlip(edge)
+{
+	if(edge.numNeighbors() != 2)
+	{
+		return false;
+	} 
+	//get our neighbors
+	var neighbors = edge.getNeighborTris();
+	var n1 = neighbors[0];
+	var n2 = neighbors[1];
+
+	//see if the third point of our first neighbor is in the circumcircle
+	//of our other neighbor tri
+	
+	var testPoint = n1.getThirdPoint(edge);
+	return n2.testInCircumcircle(testPoint);
+
+}
+
+function doFlip(edge)
+{
+	//basically get the third points of our neighbors,
+	//connect those for an edge, and connect that edge
+	//to our original vertices
+	var neighbors = edge.getNeighborTris();
+	var n1 = neighbors[0];
+	var n2 = neighbors[1];
+
+	var newPoint1 = n1.getThirdPoint(edge);
+	var newPoint2 = n2.getThirdPoint(edge);
+
+	var origPoint1 = edge.v1;
+	var origPoint2 = edge.v2;
+
+	//now we have all this data so go delete our neighbor tris
+	tLibrary.deleteTri(n1);
+	tLibrary.deleteTri(n2);
+
+	//make a new edge and new tris
+	var newEdge = new Edge(newPoint1,newPoint2);
+
+	var trisCreated = [];
+	
+	var edgeArray = new Array(newEdge);
+	trisCreated = trisCreated.concat(joinAllEdgesToPoint(edgeArray,origPoint1));
+	trisCreated = trisCreated.concat(joinAllEdgesToPoint(edgeArray,origPoint2));
+
+	//return these created tris
+	return trisCreated;
+}
+
 function recursiveTriSearch(thisTri,checkedTris,trisToDelete,point)
 {
 	//ok return if you're already in here
@@ -752,19 +841,23 @@ function insertPointOutsideConvexHull(point,testLibrary) {
             edgesToConnect.push(e);
         }
     }
-    joinAllEdgesToPoint(edgesToConnect,point);
+    var trisCreated = joinAllEdgesToPoint(edgesToConnect,point);
+    doFlipAlgorithmWithTris(trisCreated);
 }
 
 
 function joinAllEdgesToPoint(edgesToConnect,point)
 {
+    var trisCreated = [];
     //connect all of these
     for(var i = 0; i < edgesToConnect.length; i++)
     {
         var e = edgesToConnect[i];
         var t = new Triangle(point,e.v1,e.v2);
         tLibrary.addTri(t);
+	trisCreated.push(t);
     }
+    return trisCreated;
 }
 
 

@@ -861,15 +861,127 @@ function joinAllEdgesToPoint(edgesToConnect,point)
 }
 
 
+function makeSortFunction(parentVertex)
+{
+	//we will use javascript closures to make a sort function
+	//that takes in this parent vertex and does the atan2 function
+	var compareTwo = function(a,b) {
+		//subtract each 
+		var aX = a.x - parentVertex.x;
+		var aY = a.y - parentVertex.y;
+
+		var bX = b.x - parentVertex.x;
+		var bY = b.y - parentVertex.y;
+
+		return p.atan2(aX,aY) - p.atan2(bX,bY);
+	}
+
+	return compareTwo;
+}
+
+
+
+function geoSet() {
+	this.mySet = {};
+}
+
+geoSet.prototype.add = function(obj) {
+	if(!obj.id)
+	{
+		throw new Error("error -- obj has no id to be inserted",obj.id);
+	}
+	this.mySet[obj.id] = obj;
+}
+
+geoSet.prototype.remove = function(obj) {
+	this.mySet[obj.id] = false;
+}
+
+geoSet.prototype.isIn = function(obj) {
+	return this.mySet[obj.id];
+}
+
+geoSet.prototype.getAll = function() {
+	var toReturn = [];
+	for(key in this.mySet)
+	{
+		if(this.mySet[key])
+		{
+			toReturn.push(this.mySet[key]);
+		}
+	}
+	return toReturn;
+}
+
+
+
+
+
+
+
+
+
+
 
 
 function Link(myVertex) {
     this.parentVertex = myVertex;
-    this.vertices = [];
+    this.myVertices = [];
+	this.myVertexSet = new geoSet();
+    this.hasGeneratedSortFunction = false;
+	this.sortFunction = null;
+}
+
+Link.prototype.getSortFunction = function() {
+	if(!this.hasGeneratedSortFunction)
+	{
+		this.sortFunction = makeSortFunction(this.parentVertex);
+		this.hasGeneratedSortFunction = true;
+	}
+	return this.sortFunction;
+}
+
+Link.prototype.sortVertices = function() {
+	this.myVertices.sort(this.getSortFunction());
 }
 
 Link.prototype.addVertex = function(vertex) {
-    this.vertices.push(vertex);
+	//prevent inserting multiple times, could screw up
+	//getting neighbors or counting tris
+	
+	if(!this.myVertexSet.isIn(vertex))
+	{
+		this.myVertexSet.add(vertex);
+		this.myVertices.push(vertex);
+		this.sortVertices();
+	}
+	else
+	{
+		console.log("warning -- adding vertex multiple times");
+		console.log("link",this);
+		console.log("vertex",vertex);
+	}
+}
+
+Link.prototype.removeVertex = function(vertex) {
+	if(!this.myVertexSet.isIn(vertex))
+	{
+		console.log("warning -- deleting a vertex that isn't there");
+		console.log("link",this);
+		console.log("vertex",vertex);
+		return;
+	}
+
+	for(var i = 0; i < this.myVertices.length; i++)
+	{
+		var v = this.myVertices[i];
+		if(v.id == vertex.id)
+		{
+			this.myVertices.splice(i,1);
+			this.myVertexSet.remove(vertex);
+			return;
+		}
+	}
 }
 
 Link.prototype.draw = function() {
@@ -877,13 +989,14 @@ Link.prototype.draw = function() {
 }
 
 Link.prototype.drawEdges = function() {
+	//TODO
     var myCoords = this.parentVertex.getScaledCoords();
     var myX = myCoords.x;
     var myY = myCoords.y;
 
-    for(key in this.vertices)
+    for(key in this.myVertices)
     {
-        var v = this.vertices[key];
+        var v = this.myVertices[key];
         var coords = v.getScaledCoords();
         var x = coords.x;
         var y = coords.y;

@@ -72,6 +72,10 @@ function sketchProc(processing) {
         processing.width = 800;
         processing.height = 600;
         processing.background(224)
+
+		var a = processing.loadFont('Courier New');
+		processing.textFont(a,36);
+		processing.textAlign(processing.CENTER);
     };
 
     processing.mouseDragged = function() {

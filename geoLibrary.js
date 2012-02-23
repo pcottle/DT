@@ -152,12 +152,17 @@ function Point(x,y) {
 }
 
 Point.prototype.toString = function() {
-	return "Point: " + this.x + "," + this.y + " id: " + this.id;
+	return String(this.id);
+	//return "Point: " + this.x + "," + this.y + " id: " + this.id;
 }
 
 Point.prototype.draw = function() {
     var r = Point.prototype.drawSize;
     p.ellipse(this.x,this.y,r,r);
+	p.colorMode(p.RGB);
+	p.fill(p.color(0,0,0));
+	p.text(String(this.id),this.x,this.y);
+	p.fill(p.color(255,255,255));
 
     //p.point(this.x,this.y);
 }
@@ -642,6 +647,10 @@ triLibrary.prototype.deleteTri = function(tri) {
             return;
         }
     }
+	return;
+	//error muted
+	console.log(tri);
+	console.log(this.tris);
     throw new Error("error -- this library does not contain that tri");
 }
 
@@ -815,6 +824,7 @@ function insertPointInsideTri(seedTri,point) {
 
 function insertAnyPoint(point) {
     //see if theres a tri containing this point
+	fLibrary.addVertex(point);
     var result = fLibrary.getTriContainingPoint(point);
     if(result)
     {
@@ -1041,12 +1051,14 @@ Link.prototype.addVertex = function(vertex) {
 		this.myVertices.push(vertex);
 		this.sortVertices();
 	}
+	/*
 	else
 	{
 		console.log("warning -- adding vertex multiple times");
 		console.log("link",this);
 		console.log("vertex",vertex);
 	}
+	*/
 }
 
 Link.prototype.deleteVertex = function(vertex) {
@@ -1105,7 +1117,7 @@ function bbckLibrary() {
 bbckLibrary.prototype.addVertex = function(vertex) {
 	if(this.vertexToObj[vertex])
 	{
-		console.log("warning -- trying to add a vertex multiple times to bbckStructure");
+		throw new Error("warning -- trying to add a vertex multiple times to bbckStructure");
 		return;
 	}
 
@@ -1209,6 +1221,14 @@ function fullLibrary() {
 	this.vertexSet = new geoSet();
 }
 
+fullLibrary.prototype.addVertex = function(vertex) {
+	if(!this.vertexSet.isIn(vertex))
+	{
+		this.vertexSet.add(vertex);
+		this.bLibrary.addVertex(vertex);
+	}
+}
+
 fullLibrary.prototype.drawAllTris = function() {
 	this.tLibrary.drawAllTris();
 }
@@ -1223,7 +1243,7 @@ fullLibrary.prototype.addTri = function(tri) {
 		if(!this.vertexSet.isIn(tri.vertices[i]))
 		{
 			this.vertexSet.add(tri.vertices[i]);
-			bLibrary.addVertex(tri.vertices[i]);
+			this.bLibrary.addVertex(tri.vertices[i]);
 		}
 	}
 	

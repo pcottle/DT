@@ -29,6 +29,10 @@ function Vertex(id,x,y) {
     this.myLink = null;
 }
 
+Vertex.prototype.toString = function() {
+	return "Vertex: " + x + "," + y + " id: " + this.id;
+}
+
 Vertex.prototype.draw = function() {
     //scale this so it fits the viewport essentially
 
@@ -77,6 +81,10 @@ function Edge(v1,v2) {
     var ids = [v1.id,v2.id];
     ids.sort();
     this.id = String(ids[0]) + String(ids[1]);
+}
+
+Edge.prototype.toString = function() {
+	return "Edge with vertices " + this.id;
 }
 
 Edge.prototype.draw = function() {
@@ -145,6 +153,10 @@ function Point(x,y) {
     
     this.strokeWidth = 2;
     this.id = Math.round(Math.random()*1000);
+}
+
+Point.prototype.toString = function() {
+	return "Point: " + this.x + "," + this.y + " id: " + this.id;
 }
 
 Point.prototype.draw = function() {
@@ -294,6 +306,10 @@ function Triangle(v1,v2,v3) {
     this.myCircumCircle = null;
 
     this.generateId();
+}
+
+Triangle.prototype.toString = function() {
+	return "Triangle: " + this.id;
 }
 
 Triangle.prototype.generateId = function() {
@@ -885,6 +901,15 @@ function geoSet() {
 	this.mySet = {};
 }
 
+geoSet.prototype.toString = function() {
+	var str = "";
+	for(key in this.mySet)
+	{
+		str = str + String(this.mySet[key]) + ", ";
+	}
+	return str;
+}
+
 geoSet.prototype.add = function(obj) {
 	if(!obj.id)
 	{
@@ -930,6 +955,68 @@ function Link(myVertex) {
 	this.myVertexSet = new geoSet();
     this.hasGeneratedSortFunction = false;
 	this.sortFunction = null;
+}
+
+Link.prototype.getNeighborTrisOfEdge = function(vertex) {
+	//its implied that we are querying the edge of parentVertex -> vertex
+	if(!this.myVertexSet.isIn(vertex))
+	{
+		throw new Error("error -- that vertex isnt in my set");
+	}
+
+	//we need to get the "location" of vertex, and then one before and one after
+	var itsIndex = this.getIndexOf(vertex);
+	var oneBefore = this.correctIndex(itsIndex - 1);
+	var oneAfter = this.correctIndex(itsIndex + 1);
+
+	var pBefore = this.myVertices[oneBefore];
+	var pAfter = this.myVertices[oneAfter];
+
+	//make two tris, but use a set because there could be only one tri
+	var triSet = new geoSet();
+
+	var tri1 = new Triangle(this.parentVertex,vertex,pBefore);
+	var tri2 = new Triangle(this.parentVertex,vertex,pAfter);
+
+	triSet.add(tri1);
+	triSet.add(tri2);
+
+	return triSet.getAll();
+}
+
+Link.prototype.correctIndex = function(number) {
+	if(number == -1)
+	{
+		//wrap around to the front
+		return this.myVertices.length - 1;
+	}
+	if(number == this.myVertices.length)
+	{
+		//wrap around to beginning
+		return 0;
+	}
+	if(number < -1 || number > this.myVertices.length)
+	{
+		throw new Error("bad index for wraparound",number);
+	}
+
+	return number;
+}
+
+Link.prototype.getIndexOf = function(vertex) {
+
+	for(var i = 0; i < this.myVertices.length; i++)
+	{
+		if(this.myVertices[i] == vertex)
+		{
+			return i;
+		}
+	}
+	throw new Error("tried to get the index of a vertex that does not exist in our set");
+}
+
+Link.prototype.toString = function() {
+	return "Link: parentVertex of: " + String(this.parentVertex);
 }
 
 Link.prototype.getSortFunction = function() {
@@ -1003,6 +1090,55 @@ Link.prototype.drawEdges = function() {
 
         p.line(myX,myY,x,y);
     }
+}
+
+
+function bbckLibrary() {
+	this.vertexToLink = {};
+	this.vertexToObj = {};
+
+}
+
+bbckLibrary.prototype.addVertex = function(vertex) {
+	if(this.vertexToObj[vertex])
+	{
+		console.log("warning -- trying to add a vertex multiple times to bbckStructure");
+		return;
+	}
+
+	var newLink = new Link(vertex);
+	this.vertexToLink[vertex] = newLink;
+	this.vertexToObj[vertex] = vertex;
+}
+
+bbckLibrary.prototype.insertEdge = function(edge) {
+	//this does the bidirectional insertion
+	var v1 = edge.v1; var v2 = edge.v2;
+	if(!this.vertexToObj[v1] || !this.vertexToObj[v2])
+	{
+		throw new Error("error -- trying to add edge when vertices aren't added yet");
+	}
+
+	var link1 = this.vertexToLink[v1];
+	var link2 = this.vertexToLink[v2];
+
+	link1.addVertex(v2);
+	link2.addVertex(v1);
+
+	//should be done, links take care of it
+}
+
+bbckLibrary.prototype.addTri = function(tri) {
+	var edges = tri.getEdges();
+	for(var i = 0; i < 3; i++)
+	{
+		this.insertEdge(edges[i]);
+	}
+}
+
+bbckLibrary.prototype.getNeighborsOfEdge = function(edge) {
+
+
 }
 
 

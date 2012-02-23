@@ -106,12 +106,8 @@ Edge.prototype.orientTest = function(point) {
     return orient2D(this.v1,this.v2,point);
 }
 
-Edge.prototype.getNeighborTris = function(inputLibrary) {
-    if(!inputLibrary)
-    {
-        inputLibrary = tLibrary;
-    }
-    result = inputLibrary.getTrisOnEdge(this);
+Edge.prototype.getNeighborTris = function() {
+	result = fLibrary.getTrisOnEdge(this);
     return result;
 }
 
@@ -722,8 +718,8 @@ function doFlip(edge)
 	var origPoint2 = edge.v2;
 
 	//now we have all this data so go delete our neighbor tris
-	tLibrary.deleteTri(n1);
-	tLibrary.deleteTri(n2);
+	fLibrary.deleteTri(n1);
+	fLibrary.deleteTri(n2);
 
 	//make a new edge and new tris
 	var newEdge = new Edge(newPoint1,newPoint2);
@@ -774,9 +770,7 @@ function insertPointInsideTri(seedTri,point) {
     edgesToJoin = [];
 
 	//search off of this seed tri	
-	//TODO
 	recursiveTriSearch(seedTri,checkedTris,trisToDelete,point);
-	//trisToDelete = tLibrary.getAllTrisWithPointInCircumcircle(point);
 	
 	edgeCount = {};
 	edgeMap = {};
@@ -802,7 +796,7 @@ function insertPointInsideTri(seedTri,point) {
 				edgeCount[e.id] = edgeCount[e.id] + 1;
 			}
 		}
-		tLibrary.deleteTri(trisToDelete[i]);
+		fLibrary.deleteTri(trisToDelete[i]);
     }
 
 	//ok now go through and see which edges are only there once
@@ -819,32 +813,24 @@ function insertPointInsideTri(seedTri,point) {
     joinAllEdgesToPoint(edgesToJoin,point);
 }
 
-function insertAnyPoint(point,testLibrary) {
-    if(!testLibrary)
-    {
-        testLibrary = tLibrary;
-    }
+function insertAnyPoint(point) {
     //see if theres a tri containing this point
-    var result = testLibrary.getTriContainingPoint(point);
+    var result = fLibrary.getTriContainingPoint(point);
     if(result)
     {
         insertPointInsideTri(result,point);
     }
     else
     {
-        insertPointOutsideConvexHull(point,testLibrary);
+        insertPointOutsideConvexHull(point);
     }
 }
 
-function insertPointOutsideConvexHull(point,testLibrary) {
+function insertPointOutsideConvexHull(point) {
     //ok so basically get all the singleton edges, and then see if they are
     //visible, and if they are, connect them
-    if(!testLibrary)
-    {
-        testLibrary = tLibrary;
-    }
 
-    var singleEdges = tLibrary.getEdgesWithOneTri();
+    var singleEdges = fLibrary.getEdgesWithOneTri();
 
     var edgesToConnect = [];
 
@@ -870,7 +856,8 @@ function joinAllEdgesToPoint(edgesToConnect,point)
     {
         var e = edgesToConnect[i];
         var t = new Triangle(point,e.v1,e.v2);
-        tLibrary.addTri(t);
+
+        fLibrary.addTri(t);
 		trisCreated.push(t);
     }
     return trisCreated;
@@ -1062,6 +1049,10 @@ Link.prototype.addVertex = function(vertex) {
 	}
 }
 
+Link.prototype.deleteVertex = function(vertex) {
+	this.removeVertex(vertex);
+}
+
 Link.prototype.removeVertex = function(vertex) {
 	if(!this.myVertexSet.isIn(vertex))
 	{
@@ -1123,6 +1114,22 @@ bbckLibrary.prototype.addVertex = function(vertex) {
 	this.vertexToObj[vertex] = vertex;
 }
 
+
+bbckLibrary.prototype.deleteEdge = function(edge) {
+	//this does the bidirectional insertion
+	var v1 = edge.v1; var v2 = edge.v2;
+	if(!this.vertexToObj[v1] || !this.vertexToObj[v2])
+	{
+		throw new Error("error -- trying to add edge when vertices aren't added yet");
+	}
+
+	var link1 = this.vertexToLink[v1];
+	var link2 = this.vertexToLink[v2];
+
+	link1.deleteVertex(v2);
+	link2.deleteVertex(v1);
+}
+
 bbckLibrary.prototype.insertEdge = function(edge) {
 	//this does the bidirectional insertion
 	var v1 = edge.v1; var v2 = edge.v2;
@@ -1148,6 +1155,14 @@ bbckLibrary.prototype.addTri = function(tri) {
 	}
 }
 
+bbckLibrary.prototype.deleteTri = function(tri) {
+	var edges = tri.getEdges();
+	for(var i = 0; i < 3; i++)
+	{
+		this.deleteEdge(edges[i]);
+	}
+}
+
 bbckLibrary.prototype.getTrianglesForVertex = function(vertex) {
 	//TODO:
 
@@ -1158,6 +1173,10 @@ bbckLibrary.prototype.getTrianglesForVertex = function(vertex) {
 	//	return the triset array
 
 	throw new Error('not done yet');
+}
+
+bbckLibrary.prototype.getTrisOnEdge = function(edge) {
+	return this.getNeighborsOfEdge(edge);
 }
 
 bbckLibrary.prototype.getNeighborsOfEdge = function(edge) {
@@ -1184,4 +1203,52 @@ bbckLibrary.prototype.getNeighborsOfEdge = function(edge) {
 }
 
 
+function fullLibrary() {
+	this.tLibrary = new triLibrary();
+	this.bLibrary = new bbckLibrary();
+	this.vertexSet = new geoSet();
+}
+
+fullLibrary.prototype.drawAllTris = function() {
+	this.tLibrary.drawAllTris();
+}
+
+fullLibrary.highlightTrisContainingPoint = function(point) {
+	this.tLibrary.highlightTrisContainingPoint(point);
+}
+
+fullLibrary.prototype.addTri = function(tri) {
+	for(var i = 0; i < tri.vertices.length; i++)
+	{
+		if(!this.vertexSet.isIn(tri.vertices[i]))
+		{
+			this.vertexSet.add(tri.vertices[i]);
+			bLibrary.addVertex(tri.vertices[i]);
+		}
+	}
+	
+	//for drawing
+	this.tLibrary.addTri(tri);
+	//for query
+	this.bLibrary.addTri(tri);
+}
+
+fullLibrary.prototype.deleteTri = function(tri) {
+	this.tLibrary.deleteTri(tri);
+	this.bLibrary.deleteTri(tri);
+}
+
+fullLibrary.prototype.getTrisOnEdge = function(edge) {
+	return this.bLibrary.getTrisOnEdge(edge);
+}
+
+fullLibrary.prototype.getTriContainingPoint = function(point) {
+	console.log("NEED TO DO WALKING POINT LOCATION!!");
+	return this.tLibrary.getTriContainingPoint(point);
+}
+
+fullLibrary.prototype.getEdgesWithOneTri = function() {
+	console.log("NEED TO DO THIS ALSO -- edge query for convex hull");
+	return this.tLibrary.getEdgesWithOneTri();
+}
 

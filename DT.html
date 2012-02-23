@@ -61,7 +61,7 @@ function sketchProc(processing) {
             //pointBuffer[i].draw();
         }
         //draw mode
-        tLibrary.drawAllTris(drawMode);
+        fLibrary.drawAllTris(drawMode);
         for(key in highlightedEdges)
         {
             highlightedEdges[key].draw();
@@ -107,7 +107,7 @@ function sketchProc(processing) {
                 p3 = pointBuffer[2];
                 //pointBuffer = [];
                 var tri = new Triangle(p1,p2,p3);
-                tLibrary.addTri(tri);
+                fLibrary.addTri(tri);
             }
 	    else
 	    {
@@ -119,7 +119,7 @@ function sketchProc(processing) {
             //right click
             var p1 = new Point(p.mouseX,p.mouseY);
 
-            tLibrary.highlightTrisContainingPoint(p1);
+            fLibrary.highlightTrisContainingPoint(p1);
         }
         else if(p.mouseButton == 3)
         {
@@ -246,8 +246,8 @@ $j(document).ready(function(){
     theTri = new Triangle(p1,p2,p3);
 
     //theEdge = new Edge(p1,p2);
-    tLibrary = new triLibrary();
-	tLibrary.addTri(theTri);
+    fLibrary = new fullLibrary();
+    fLibrary.addTri(theTri);
 	pointBuffer.length = 3;
 	//randomPoints();
 

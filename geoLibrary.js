@@ -30,7 +30,7 @@ function Vertex(id,x,y) {
 }
 
 Vertex.prototype.toString = function() {
-	return "Vertex: " + x + "," + y + " id: " + this.id;
+	return this.id;
 }
 
 Vertex.prototype.draw = function() {
@@ -84,7 +84,7 @@ function Edge(v1,v2) {
 }
 
 Edge.prototype.toString = function() {
-	return "Edge with vertices " + this.id;
+	return this.id;
 }
 
 Edge.prototype.draw = function() {
@@ -871,7 +871,7 @@ function joinAllEdgesToPoint(edgesToConnect,point)
         var e = edgesToConnect[i];
         var t = new Triangle(point,e.v1,e.v2);
         tLibrary.addTri(t);
-	trisCreated.push(t);
+		trisCreated.push(t);
     }
     return trisCreated;
 }
@@ -982,6 +982,18 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 	triSet.add(tri2);
 
 	return triSet.getAll();
+}
+
+Link.prototype.getAllEdges = function() {
+	var edgeSet = new geoSet();
+
+	for(var i = 0; i < myVertices.length; i++)
+	{
+		//make an edge
+		var e = new Edge(this.parentVertex,this.myVertices[i]);
+		edgeSet.add(e);
+	}
+	return edgeSet.getAll();
 }
 
 Link.prototype.correctIndex = function(number) {
@@ -1136,9 +1148,39 @@ bbckLibrary.prototype.addTri = function(tri) {
 	}
 }
 
+bbckLibrary.prototype.getTrianglesForVertex = function(vertex) {
+	//TODO:
+
+	//Outline:
+	//	make all the edges for this vertex (a link method)
+	//	query all the triangles for these edges
+	//	add these to a triset
+	//	return the triset array
+
+	throw new Error('not done yet');
+}
+
 bbckLibrary.prototype.getNeighborsOfEdge = function(edge) {
+	//for each edge "direction", get the tris and add to a set
+	var v1 = edge.v1;
+	var v2 = edge.v2;
 
+	var link1 = this.vertexToLink[v1];
+	var link2 = this.vertexToLink[v2];
 
+	var tris1 = link1.getNeighborTrisOfEdge(v2);
+	var tris2 = link2.getNeighborTrisOfEdge(v1);
+
+	var triSet = new geoSet();
+
+	if(tris1.length != tris2.length)
+	{
+		console.log(tris1);
+		console.log(tris2);
+		throw new Error("weird, tris returned different lengths for 2 different directions");
+	}
+	//arbitrary selection
+	return tris1;
 }
 
 

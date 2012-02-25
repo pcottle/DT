@@ -14,6 +14,7 @@ click to add points, spacebar afterwards for faster insertion
 <link href="style.css" rel="stylesheet" type="text/css"/>
 
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
+<script type="text/javascript" src="jquery.min.js"></script>
 <script type="text/javascript" src="geoLibrary.js"></script>
 <script type="text/javascript" src="sylvester.src.js"></script>
 <script type="text/javascript">
@@ -58,7 +59,7 @@ function sketchProc(processing) {
         }
         for(var i = 0; i < pointBuffer.length; i++)
         {
-            //pointBuffer[i].draw();
+            pointBuffer[i].draw();
         }
         //draw mode
         fLibrary.drawAllTris(drawMode);
@@ -76,6 +77,7 @@ function sketchProc(processing) {
 		var a = processing.loadFont('Courier New');
 		processing.textFont(a,36);
 		processing.textAlign(processing.CENTER);
+
     };
 
     processing.mouseDragged = function() {
@@ -158,11 +160,16 @@ function loadFile()
     var lines = fileText.split('\n');
     lines.splice(0,1);
     
+    //delete the existing library 
+    fLibrary = new fullLibrary();
+    pointBuffer = [];
+
     readInVertices(numVertices,lines);
 }
 
 function readInVertices(numVertices,lines)
 {
+    var numVertices = 0;
     try{
 
         allVertices = {};
@@ -195,9 +202,24 @@ function readInVertices(numVertices,lines)
             }
 
             //make a new vertex and assign it
-            allVertices[vertexNum] = new Vertex(vertexNum,xCoord,yCoord);
-        }
+            var newlyMade = new Vertex(vertexNum,xCoord,yCoord);
+            allVertices[vertexNum] = newlyMade;
+            numVertices++;
+            if(numVertices > 3)
+            {
+                insertAnyPoint(newlyMade);
+            }
 
+            if(numVertices == 3)
+            {
+                //make a tri and add it
+                var vArray = [];
+                for(key in allVertices)
+                { vArray.push(allVertices[key]); }
+                var tri = new Triangle(vArray[0],vArray[1],vArray[2]);
+                fLibrary.addTri(tri);
+            }
+        }
     }
     catch(err)
     {
@@ -251,8 +273,8 @@ $j(document).ready(function(){
 
     //theEdge = new Edge(p1,p2);
     fLibrary = new fullLibrary();
-    fLibrary.addTri(theTri);
-	pointBuffer.length = 3;
+    //fLibrary.addTri(theTri);
+	//pointBuffer.length = 3;
 	//randomPoints();
 
 

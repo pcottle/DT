@@ -10,7 +10,7 @@ function randPoint() {
 }
 
 highlightedEdges = [];
-
+var outputId = false;
 
 
 /************************
@@ -26,7 +26,14 @@ function Vertex(id,x,y) {
     this.id = id;
     this.x = x;
     this.y = y;
-    this.myLink = null;
+
+
+    var newX = (this.x / maxVertexX) * 0.8 * p.width + 0.1 * p.width;
+    var newY = (this.y / maxVertexY) * 0.8 * p.height + 0.1 * p.height;
+    var point = new Point(newX,newY);
+    point.id = this.id;
+
+    this.scaledPoint = point;
 }
 
 Vertex.prototype.toString = function() {
@@ -36,19 +43,11 @@ Vertex.prototype.toString = function() {
 Vertex.prototype.draw = function() {
     //scale this so it fits the viewport essentially
 
-    var newX = (this.x / maxVertexX) * 0.8 * p.width + 0.1 * p.width;
-    var newY = (this.y / maxVertexY) * 0.8 * p.height + 0.1 * p.height;
-
-    p.point(newX,newY);
-    //p.point(this.x,this.y);
+    this.scaledPoint.draw();
 }
 
 Vertex.prototype.getScaledCoords = function() {
-
-    var newX = (this.x / maxVertexX) * 0.8 * p.width + 0.1 * p.width;
-    var newY = (this.y / maxVertexY) * 0.8 * p.height + 0.1 * p.height;
-    
-    return new Point(newX,newY);
+    return this.scaledPoint;
 }
 
 Vertex.prototype.getCoords = function() {
@@ -146,6 +145,7 @@ function orient2D(pp,q,r) {
 function Point(x,y) {
     this.x = x;
     this.y = y;
+    this.isPoint = true;
     
     this.strokeWidth = 2;
     this.id = Math.round(Math.random()*1000);
@@ -159,10 +159,14 @@ Point.prototype.toString = function() {
 Point.prototype.draw = function() {
     var r = Point.prototype.drawSize;
     p.ellipse(this.x,this.y,r,r);
-	p.colorMode(p.RGB);
-	p.fill(p.color(0,0,0));
-	p.text(String(this.id),this.x,this.y);
-	p.fill(p.color(255,255,255));
+
+    if(outputId)
+    {
+        p.colorMode(p.RGB);
+        p.fill(p.color(0,0,0));
+        p.text(String(this.id),this.x,this.y);
+        p.fill(p.color(255,255,255));
+    }
 
     //p.point(this.x,this.y);
 }
@@ -323,6 +327,18 @@ Triangle.prototype.generateId = function() {
     }
 
     this.id = startingId;
+}
+
+Triangle.prototype.getAvgPoint = function() {
+    var a = this.vertices[0];
+    var b = this.vertices[1];
+    var c = this.vertices[2];
+
+    var avgX = (1/3.0) * (a.x + b.x + c.x);
+    var avgY = (1/3.0) * (a.y + b.y + c.y);
+
+    var avgPoint = new Point(avgX,avgY);
+    return avgPoint;
 }
 
 Triangle.prototype.getEdges = function() {
@@ -975,8 +991,79 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 	var tri1 = new Triangle(this.parentVertex,vertex,pBefore);
 	var tri2 = new Triangle(this.parentVertex,vertex,pAfter);
 
-	triSet.add(tri1);
-	triSet.add(tri2);
+    triSet.add(tri1);
+    triSet.add(tri2);
+
+    var all = triSet.getAll();
+    if(all.length == 1)
+    {
+        return all;
+    }
+
+	//ok we have to test whether wraparound has occurred (aka forget about
+	//the ghost vertex). To do this, take the vector from
+	//our parent vertex to the pBefore or pAfter, and cross that
+	//with the vector of parentVertex to vertex. for before, it should
+	//be positive, for after, it should be negative
+
+    var beforeAvg = tri1.getAvgPoint();
+    var afterAvg = tri2.getAvgPoint();
+	
+	var pX = this.parentVertex.x; var pY = this.parentVertex.y;
+	var vX = vertex.x; var vY = vertex.y;
+
+	var mainVector = $V([vX - pX,vY - pY,0]);
+	var beforeVector = $V([beforeAvg.x - pX, beforeAvg.y - pY,0]);
+	var afterVector = $V([afterAvg.x - pX, afterAvg.y - pY,0]);
+
+	var beforeCross = beforeVector.cross(mainVector);
+	var afterCross = afterVector.cross(mainVector);
+
+	//ok so the sign of beforeCross should be positive, and
+	//the sign of after cross should be negative
+	
+	var beforeSign = Math.round(beforeCross.elements[2] / Math.abs(beforeCross.elements[2]));
+	var afterSign = Math.round(afterCross.elements[2] / Math.abs(afterCross.elements[2]));
+
+    //ugly hack to check if our y coordinates are flipped because these are points
+    //and not vertices
+    if(this.parentVertex.isPoint || true)
+    {
+        beforeSign *= -1; afterSign *= -1;
+    }
+
+	var beforeGood = false;
+	var afterGood = false;
+	if(beforeSign == 1)
+	{
+		beforeGood = true;
+	}
+	if(afterSign == -1)
+	{
+		afterGood = true;
+	}
+
+    /*
+	if(afterGood + beforeGood == 1)
+	{
+		console.log("suspected convex hull edge!");
+		console.log("this point", this.parentVertex.id, " and this ", vertex.id);
+	}
+    */
+
+	if(afterGood + beforeGood == 0)
+	{
+		console.log("before sign", beforeSign, " and after sign ", afterSign);
+		console.log("before point", pBefore.id, " and after point ", pAfter.id);
+		console.log("this point", this.parentVertex.id, " and this ", vertex.id);
+        console.log("before vec", beforeVector, " and main vec", mainVector);
+        console.log("before cross main result", beforeCross);
+        console.log("before point", pBefore, " and main point", vertex);
+		throw new Error("edge with no neighbors!");
+	}
+
+	if(!beforeGood) { triSet.remove(tri1); }
+	if(!afterGood)  { triSet.remove(tri2); }
 
 	return triSet.getAll();
 }
@@ -1021,6 +1108,8 @@ Link.prototype.getIndexOf = function(vertex) {
 			return i;
 		}
 	}
+    console.log("the link", this);
+    console.log("the vertex to get is ", vertex);
 	throw new Error("tried to get the index of a vertex that does not exist in our set");
 }
 
@@ -1229,8 +1318,8 @@ fullLibrary.prototype.addVertex = function(vertex) {
 	}
 }
 
-fullLibrary.prototype.drawAllTris = function() {
-	this.tLibrary.drawAllTris();
+fullLibrary.prototype.drawAllTris = function(drawMode) {
+	this.tLibrary.drawAllTris(drawMode);
 }
 
 fullLibrary.highlightTrisContainingPoint = function(point) {

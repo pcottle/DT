@@ -106,7 +106,7 @@ function sketchProc(processing) {
             var p1 = new Point(p.mouseX,p.mouseY);
 
             pointBuffer.push(p1);
-            if(pointBuffer.length == 3 && false)
+            if(pointBuffer.length == 3)
             {
                 p1 = pointBuffer[0];
                 p2 = pointBuffer[1];
@@ -170,83 +170,55 @@ function loadFile()
 function readInVertices(numVertices,lines)
 {
     var numVertices = 0;
-    try{
+    var vBuffer = [];
 
-        allVertices = {};
+    allVertices = {};
 
-        //1-indexing >___________<
-        for(var i = 0; i <= lines.length; i++)
+    //1-indexing >___________<
+    for(var i = 0; i <= lines.length; i++)
+    {
+        var theLine = lines[i];
+
+        //regex for (1 - number of vertex) (2- x coord) (3- y coord)
+        var results = /\s*(\d+)\s+([.0-9]+)\s+([.0-9]+)/.exec(theLine);
+
+        if(!results)
         {
-            var theLine = lines[i];
+            continue;
+        }
 
-            //regex for (1 - number of vertex) (2- x coord) (3- y coord)
-            var results = /\s*(\d+)\s+([.0-9]+)\s+([.0-9]+)/.exec(theLine);
+        var vertexNum = Number(results[1]);
+        var xCoord = Number(results[2]);
+        var yCoord = Number(results[3]);
 
-            if(!results)
-            {
-                continue;
-            }
+        if(xCoord > maxVertexX)
+        {
+            maxVertexX = xCoord;
+        }
 
-            var vertexNum = Number(results[1]);
-            var xCoord = Number(results[2]);
-            var yCoord = Number(results[3]);
+        if(yCoord > maxVertexY)
+        {
+            maxVertexY = yCoord;
+        }
 
-            if(xCoord > maxVertexX)
-            {
-                maxVertexX = xCoord;
-            }
-
-            if(yCoord > maxVertexY)
-            {
-                maxVertexY = yCoord;
-            }
-
-            //make a new vertex and assign it
-            var newlyMade = new Vertex(vertexNum,xCoord,yCoord);
-            allVertices[vertexNum] = newlyMade;
-            numVertices++;
+        //make a new vertex and assign it
+        var newlyMade = new Vertex(vertexNum,xCoord,yCoord);
+        allVertices[vertexNum] = newlyMade;
+        numVertices++;
+        vBuffer.push(newlyMade);
+        if(numVertices == 3)
+        {
+            var tri = new Triangle(vBuffer[0],vBuffer[1],vBuffer[2]);
+            fLibrary.addTri(tri);
+        }
+        else if(numVertices > 3)
+        {
+            console.log("inserting point", newlyMade.id);
             insertAnyPoint(newlyMade);
         }
     }
-    catch(err)
-    {
-        alert("Something seems to be wrong with your input file format!");
-        throw err;
-    }
-    //now add each vertex to each link as a test
-    testLinks();
 }
 
-function testLinks()
-{
-    for(key in allVertices)
-    {
-        var v = allVertices[key];
-        var l = new Link(v);
-
-        for(key2 in allVertices)
-        {
-            var j = allVertices[key2];
-            if(v != j)
-            {
-                //make add vertex
-                l.addVertex(j);
-            }
-        }
-
-        /*
-        console.log("making this link");
-        console.log(l);
-        console.log("against this vertex");
-        console.log(v);
-        */
-
-        allLinks[v.id] = l;
-        v.myLink = l;
-    }
-}
-
-// attaching the sketchProc function to the canvas
 
 $j(document).ready(function(){
     canvas = document.getElementById("canvas1");

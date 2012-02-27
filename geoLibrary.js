@@ -10,15 +10,12 @@ function randPoint() {
 }
 
 highlightedEdges = [];
-var outputId = false;
-
+var outputId = true;
 
 /************************
     Primitives and such
     
-    
 ******************/
-
 
 
 
@@ -461,10 +458,9 @@ Triangle.prototype.isGhostTri = function() {
 }
 
 Triangle.prototype.draw = function() {
-    //with scaled coordinates
     if(this.isGhostTri())
     {
-        //return; TODO
+        //return; 
     }
 
 
@@ -539,6 +535,8 @@ Triangle.prototype.containsPoint = function(testPoint) {
     //not too bad -- just do the sameside test for all
     var ss = Triangle.prototype.sameSide;
 
+    //TODO: we need to change this for when the point is on the triangle line,
+    //this technically means the triangle "contains" the point which is kinda bs
     return ss(a,b,c,testPoint) && ss(b,c,a,testPoint) && ss(c,a,b,testPoint);
 }
 
@@ -1012,8 +1010,20 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 	var tri1 = new Triangle(this.parentVertex,vertex,pBefore);
 	var tri2 = new Triangle(this.parentVertex,vertex,pAfter);
 
+    //the key thing here is that if this triangle doesn't exist,
+    if(fLibrary.triSet.isIn(tri1))
+    {
+        triSet.add(tri1);
+    }
+    if(fLibrary.triSet.isIn(tri2))
+    {
+        triSet.add(tri2);
+    }
+
+    /*
     triSet.add(tri1);
     triSet.add(tri2);
+    */
 
 	return triSet.getAll();
 }
@@ -1128,7 +1138,6 @@ Link.prototype.draw = function() {
 }
 
 Link.prototype.drawEdges = function() {
-	//TODO
     var myCoords = this.parentVertex.getScaledCoords();
     var myX = myCoords.x;
     var myY = myCoords.y;
@@ -1213,13 +1222,14 @@ bbckLibrary.prototype.deleteTri = function(tri) {
 }
 
 bbckLibrary.prototype.getTrianglesForVertex = function(vertex) {
-	//TODO:
 
 	//Outline:
 	//	make all the edges for this vertex (a link method)
 	//	query all the triangles for these edges
 	//	add these to a triset
 	//	return the triset array
+
+    //wait do we need this??
 
 	throw new Error('not done yet');
 }
@@ -1257,13 +1267,10 @@ function fullLibrary() {
 	this.bLibrary = new bbckLibrary();
 	this.vertexSet = new geoSet();
 
-    //make the ghost tri and add it to both
-    var v1 = new Point(0,10000);
-    var v2 = new Point(1000,1000);
-    var v3 = new Point(10,-1000);
+    //eff the ghost vertex, lets make a set of triangles
+    this.triSet = new geoSet();
 
-    var tri = new Triangle(v1,v2,v3);
-    this.addTri(tri);
+
 }
 
 fullLibrary.prototype.addVertex = function(vertex) {
@@ -1296,11 +1303,15 @@ fullLibrary.prototype.addTri = function(tri) {
 	this.tLibrary.addTri(tri);
 	//for query
 	this.bLibrary.addTri(tri);
+
+    //for existence
+    this.triSet.add(tri);
 }
 
 fullLibrary.prototype.deleteTri = function(tri) {
 	this.tLibrary.deleteTri(tri);
 	this.bLibrary.deleteTri(tri);
+    this.triSet.remove(tri);
 }
 
 fullLibrary.prototype.getTrisOnEdge = function(edge) {

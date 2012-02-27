@@ -9,6 +9,17 @@ function randPoint() {
     return new Point(x,y);
 }
 
+function arrayShuffle(theArray) {
+    var len = theArray.length;
+    var i = len;
+    while (i--) {
+        var p = parseInt(Math.random()*len);
+        var t = theArray[i];
+        theArray[i] = theArray[p];
+        theArray[p] = t;
+    }
+};
+
 highlightedEdges = [];
 var outputId = true;
 

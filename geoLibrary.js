@@ -1103,7 +1103,7 @@ Link.prototype.getIndexOf = function(vertex) {
 
 	for(var i = 0; i < this.myVertices.length; i++)
 	{
-		if(this.myVertices[i] == vertex)
+		if(this.myVertices[i].id == vertex.id)
 		{
 			return i;
 		}

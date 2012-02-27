@@ -30,6 +30,7 @@ var theEdge = null;
 var theTri = null;
 var pointBuffer = [];
 var drawMode = true;
+var fileMode = false;
 
 var allVertices = {};
 var allLinks = {};
@@ -103,9 +104,30 @@ function sketchProc(processing) {
         {
             //left click
             //make a new point here, test the left or right test
-            var p1 = new Point(p.mouseX,p.mouseY);
+            var x = p.mouseX;
+            var y = p.mouseY;
 
-            pointBuffer.push(p1);
+            var toInsert = null;
+            if(fileMode)
+            {
+                //need to convert this x and y into file coordinates
+                x = x - 0.1 * p.width;
+                x = x / (0.8 * p.width);
+                x = x * maxVertexX;
+
+                y = y - 0.1 * p.height;
+                y = y / (0.8 * p.height);
+                y = y * maxVertexY;
+
+                var id = Math.round(Math.random() * 10000);
+                toInsert = new Vertex(id,x,y);
+            }
+            else
+            {
+                toInsert = new Point(x,y);
+            }
+
+            pointBuffer.push(toInsert);
             if(pointBuffer.length == 3)
             {
                 p1 = pointBuffer[0];
@@ -117,7 +139,7 @@ function sketchProc(processing) {
             }
             else
             {
-                insertAnyPoint(p1);
+                insertAnyPoint(toInsert);
             }
         }
         else if(p.mouseButton == 39)
@@ -142,6 +164,12 @@ function randomPoints()
 	insertAnyPoint(p1);
 
 	setTimeout("randomPoints()",200);
+}
+
+function outputFile()
+{
+    var text = fLibrary.outputFile();
+    $j('#outputFile').val(text);
 }
 
 function loadFile()
@@ -171,16 +199,18 @@ function readInVertices(numVertices,lines)
 {
     var numVertices = 0;
     var vBuffer = [];
+    fileMode = true;
 
     allVertices = {};
 
-    //1-indexing >___________<
+    var regex = /\s*(\d+)\s+([.0-9]+)\s+([.0-9]+)/;
+    //get min and max
     for(var i = 0; i <= lines.length; i++)
     {
         var theLine = lines[i];
 
         //regex for (1 - number of vertex) (2- x coord) (3- y coord)
-        var results = /\s*(\d+)\s+([.0-9]+)\s+([.0-9]+)/.exec(theLine);
+        var results = regex.exec(theLine);
 
         if(!results)
         {
@@ -200,20 +230,40 @@ function readInVertices(numVertices,lines)
         {
             maxVertexY = yCoord;
         }
+    }
+
+     
+    //read in vertices
+    for(var i = 0; i <= lines.length; i++)
+    {
+        var theLine = lines[i];
+
+        //regex for (1 - number of vertex) (2- x coord) (3- y coord)
+        var results = regex.exec(theLine);
+
+        if(!results)
+        {
+            continue;
+        }
+
+        var vertexNum = Number(results[1]);
+        var xCoord = Number(results[2]);
+        var yCoord = Number(results[3]);
 
         //make a new vertex and assign it
         var newlyMade = new Vertex(vertexNum,xCoord,yCoord);
         allVertices[vertexNum] = newlyMade;
         numVertices++;
         vBuffer.push(newlyMade);
+
         if(numVertices == 3)
         {
             var tri = new Triangle(vBuffer[0],vBuffer[1],vBuffer[2]);
             fLibrary.addTri(tri);
         }
-        else if(numVertices > 3 && numVertices < 100)
+        else if(numVertices > 3)
         {
-            console.log("inserting point", newlyMade.id);
+            //console.log("inserting point", newlyMade.id);
             insertAnyPoint(newlyMade);
         }
     }
@@ -264,7 +314,10 @@ $j(document).ready(function(){
         </tr>
         <tr>
             <td>
-            <button onclick="javascript:loadFile()">Load File</button>
+                <button onclick="javascript:loadFile()">Load File</button>
+            </td>
+            <td>
+                <button onclick="javascript:outputFile()">Output File</button>
             </td>
         </tr>
         

@@ -387,6 +387,45 @@ Triangle.prototype.getAvgPoint = function() {
     return avgPoint;
 }
 
+Triangle.prototype.WPLsearch = function(searchPoint) {
+    //this function ASSUMES that you have checked if the point
+    //is inside the triangle. it only tries to find a triangle
+    //of its neighbors that goes in the right direction
+
+    //two methods -- one is compute distance between avg point
+    //of neighbor and tri, and the other is the ss test
+
+    var searchSet = new geoSet();
+    searchSet.add(this);
+
+    var avgPoint = this.getAvgPoint();
+    var ss = Triangle.prototype.sameSide;
+
+    //get all your edges
+    var edges = this.getEdges();
+    for(var i = 0; i < edges.length; i++)
+    {
+        var e = edges[i];
+        var a = e.v1;
+        var b = e.v2;
+
+        //test if the point is on the opposite side of this
+        //edge as the avg point
+        if(!ss(a,b,avgPoint,searchPoint))
+        {
+            //we could search here
+            var neighbors = fLibrary.getTrisOnEdge(e);
+            searchSet.addArray(neighbors);
+        }
+    }
+    //now remove yourself from searchset -- you get added when
+    //the neighbor edge query thing happens
+    searchSet.remove(this);
+
+    //all the tris you could search
+    return searchSet.getAll();
+}
+
 Triangle.prototype.isDegenerate = function() {
     var a = this.vertices[0];
     var b = this.vertices[1];
@@ -759,6 +798,18 @@ triLibrary.prototype.deleteTri = function(tri) {
     throw new Error("error -- this library does not contain that tri");
 }
 
+triLibrary.prototype.outputAllTris = function() {
+    var textForOutput = "";
+    for(var i = 0; i < this.tris.length; i++)
+    {
+        var t = this.tris[i];
+        var a = t.vertices[0]; var b = t.vertices[1]; var c = t.vertices[2];
+
+        textForOutput += "Tri num " + String(i + 1) + ": " + a.id + " " + b.id + " " + c.id + "\n";
+    }
+    return textForOutput;
+}
+
 function doFlipAlgorithmWithTris(trisToStart)
 {
 	var checkedEdges = {};
@@ -1042,6 +1093,10 @@ geoSet.prototype.union = function(otherSet) {
 }
 
 geoSet.prototype.add = function(obj) {
+    if(!obj || !obj.id)
+    {
+        return;
+    }
 	if(!obj.id)
 	{
 		throw new Error("error -- obj has no id to be inserted",obj.id);
@@ -1272,7 +1327,7 @@ Link.prototype.drawEdges = function() {
 function bbckLibrary() {
 	this.vertexToLink = {};
 	this.vertexToObj = {};
-
+    this.startingTriForWPL = null;
 }
 
 bbckLibrary.prototype.addVertex = function(vertex) {
@@ -1321,11 +1376,57 @@ bbckLibrary.prototype.insertEdge = function(edge) {
 }
 
 bbckLibrary.prototype.addTri = function(tri) {
+    this.startingTriForWPL = tri;
+
 	var edges = tri.getEdges();
 	for(var i = 0; i < 3; i++)
 	{
 		this.insertEdge(edges[i]);
 	}
+}
+
+bbckLibrary.prototype.findTriContainingPoint = function(point) {
+    var startTri = fLibrary.tLibrary.tris[0];
+    //TODO -- this tri might not exist yet
+
+    //enter the loop... ?
+    var result = this.walkingPointLocation(startTri,point);
+    return result;
+}
+
+bbckLibrary.prototype.walkingPointLocation = function(startTri,point) {
+    //begin the queue thing
+    var checkedTris = new geoSet();
+    var triQueue = [];
+    triQueue.push(startTri);
+
+    while(triQueue.length > 0)
+    {
+        var t = triQueue.pop();
+        
+        //dont search the same tri twice
+        //this kinda ends up being like depth first graph search
+        if(checkedTris.isIn(t))
+        {
+            continue;
+        }
+        checkedTris.add(t);
+
+        //see if it contains it
+        if(t.containsPoint(point))
+        {
+            //we are done!
+            return t;
+        }
+        //otherwise get all the neighbors to search
+        var neighbors = t.WPLsearch(point);
+        if(neighbors.length)
+        {
+            triQueue = triQueue.concat(neighbors);
+        }
+    }
+    //no triangle found :(
+    return null;
 }
 
 bbckLibrary.prototype.deleteTri = function(tri) {
@@ -1404,6 +1505,11 @@ fullLibrary.prototype.addVertex = function(vertex) {
 	}
 }
 
+fullLibrary.prototype.outputFile = function() {
+    var text = this.tLibrary.outputAllTris();
+    return text;
+}
+
 fullLibrary.prototype.drawAllTris = function(drawMode) {
 	this.tLibrary.drawAllTris(drawMode);
 }
@@ -1443,6 +1549,9 @@ fullLibrary.prototype.getTrisOnEdge = function(edge) {
 
 fullLibrary.prototype.getTriContainingPoint = function(point) {
 	console.log("NEED TO DO WALKING POINT LOCATION!!");
+    //try this out
+    return this.bLibrary.findTriContainingPoint(point);
+    //TODO
 	return this.tLibrary.getTriContainingPoint(point);
 }
 

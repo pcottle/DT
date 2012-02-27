@@ -211,7 +211,7 @@ function readInVertices(numVertices,lines)
             var tri = new Triangle(vBuffer[0],vBuffer[1],vBuffer[2]);
             fLibrary.addTri(tri);
         }
-        else if(numVertices > 3)
+        else if(numVertices > 3 && numVertices < 100)
         {
             console.log("inserting point", newlyMade.id);
             insertAnyPoint(newlyMade);

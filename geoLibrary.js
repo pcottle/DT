@@ -70,6 +70,20 @@ Segment.prototype.normalSegment = function() {
     p.stroke(0,0,0);
 }
 
+Segment.prototype.pointOnLine = function(a,b,c) {
+    var Ba = $V([b.x - a.x, b.y - a.y, 0]);
+    var Ca = $V([c.x - a.x, c.y - a.y, 0]);
+
+    var crossResultVec = Ba.cross(Ca);
+    var crossResult = crossResultVec.elements[2];
+
+    if(Math.abs(crossResult) > 0.001)
+    {
+        return false;
+    }
+    return true;
+}
+
 Segment.prototype.pointOnSegment = function(a,b,c) {
     //first get the cross product between b-a and c-a and check that it's zero
     var Ba = $V([b.x - a.x, b.y - a.y, 0]);
@@ -256,14 +270,16 @@ Circle.prototype.circleFromPoints = function (p1,p2,p3) {
     
     if(!centerX || !centerY || !radius)
     {
+        /*
         console.log("warning -- invalid circumcircle");
         console.log("the points");
         console.log(p1,p2,p3);
         console.log("center center radius");
         console.log(centerX,centerY,radius);
         console.log("slope",slope1,slope2);
+        */
         return null;
-        throw new Error("invalid circumcircle, center or radius is undefined");
+        //throw new Error("invalid circumcircle, center or radius is undefined");
     }
     var c = new Circle(centerX,centerY,radius);
     return c;
@@ -369,6 +385,14 @@ Triangle.prototype.getAvgPoint = function() {
 
     var avgPoint = new Point(avgX,avgY);
     return avgPoint;
+}
+
+Triangle.prototype.isDegenerate = function() {
+    var a = this.vertices[0];
+    var b = this.vertices[1];
+    var c = this.vertices[2];
+
+    return Segment.prototype.pointOnLine(a,b,c);
 }
 
 Triangle.prototype.getEdges = function() {
@@ -584,10 +608,8 @@ Triangle.prototype.containsPoint = function(testPoint) {
         ss3 = Segment.prototype.pointOnSegment(c,a,testPoint);
     }
 
-    if(testPoint.id == 9)
-    {
-        console.log("yo!");
-    }
+    //we need to return both the result of the test and
+    //if one of the points was on a line
     return ss1 && ss2 && ss3;
 }
 
@@ -909,7 +931,7 @@ function insertAnyPoint(point) {
     //see if theres a tri containing this point
 	fLibrary.addVertex(point);
     var result = fLibrary.getTriContainingPoint(point);
-    console.log(result);
+    //console.log(result); the triangle i got when searching...
     if(result)
     {
         insertPointInsideTri(result,point);
@@ -951,8 +973,16 @@ function joinAllEdgesToPoint(edgesToConnect,point)
         var e = edgesToConnect[i];
         var t = new Triangle(point,e.v1,e.v2);
 
-        fLibrary.addTri(t);
-		trisCreated.push(t);
+        //here we need to make sure the tri isnt 
+        //degenerate... because this happens when
+        //we insert points righton top of lines
+
+        //so test the tri for being degenerate
+        if(!t.isDegenerate())
+        {
+            fLibrary.addTri(t);
+            trisCreated.push(t);
+        }
     }
     return trisCreated;
 }
@@ -982,6 +1012,13 @@ function geoSet() {
 	this.mySet = {};
 }
 
+geoSet.prototype.addArray = function(toAdd) {
+    for(var i = 0; i < toAdd.length; i++)
+    {
+        this.add(toAdd[i]);
+    }
+}
+
 geoSet.prototype.toString = function() {
 	var str = "";
 	for(key in this.mySet)
@@ -989,6 +1026,19 @@ geoSet.prototype.toString = function() {
 		str = str + String(this.mySet[key]) + ", ";
 	}
 	return str;
+}
+
+geoSet.prototype.union = function(otherSet) {
+    var toReturn = new geoSet();
+    for(key in this.mySet)
+    {
+        toReturn.add(this.mySet[key]);
+    }
+    for(key in otherSet.mySet)
+    {
+        toReturn.add(this.mySet[key]);
+    }
+    return toReturn;
 }
 
 geoSet.prototype.add = function(obj) {
@@ -1047,6 +1097,14 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 		throw new Error("error -- that vertex isnt in my set");
 	}
 
+    //debug check
+    var debugCheck = false; // TODO
+    if(this.parentVertex.id == 2 && vertex.id == 6)
+    {
+        console.log("debuggin!!!");
+        debugCheck = true;
+    }
+
 	//we need to get the "location" of vertex, and then one before and one after
 	var itsIndex = this.getIndexOf(vertex);
 	var oneBefore = this.correctIndex(itsIndex - 1);
@@ -1054,6 +1112,12 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 
 	var pBefore = this.myVertices[oneBefore];
 	var pAfter = this.myVertices[oneAfter];
+
+    if(debugCheck)
+    {
+        console.log("point before", pBefore);
+        console.log("and after", pAfter);
+    }
 
 	//make two tris, but use a set because there could be only one tri
 	var triSet = new geoSet();
@@ -1265,6 +1329,7 @@ bbckLibrary.prototype.addTri = function(tri) {
 }
 
 bbckLibrary.prototype.deleteTri = function(tri) {
+
 	var edges = tri.getEdges();
 	for(var i = 0; i < 3; i++)
 	{
@@ -1300,14 +1365,20 @@ bbckLibrary.prototype.getNeighborsOfEdge = function(edge) {
 	var tris1 = link1.getNeighborTrisOfEdge(v2);
 	var tris2 = link2.getNeighborTrisOfEdge(v1);
 
-	var triSet = new geoSet();
+	var triSet1 = new geoSet();
+    triSet1.addArray(tris1);
+    var triSet2 = new geoSet();
+    triSet2.addArray(tris2);
 
 	if(tris1.length != tris2.length)
 	{
         console.log("on this edge", edge, "i got");
 		console.log(tris1);
 		console.log(tris2);
+        console.warn("weird!!");
+        return triSet1.union(triSet2);
 		throw new Error("weird, tris returned different lengths for 2 different directions");
+        //TODO
 	}
 	//arbitrary selection
 	return tris1;

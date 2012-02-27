@@ -25,8 +25,8 @@ function Vertex(id,x,y) {
     this.y = y;
 
 
-    var newX = (this.x / maxVertexX) * 0.8 * p.width + 0.1 * p.width;
-    var newY = (this.y / maxVertexY) * 0.8 * p.height + 0.1 * p.height;
+    var newX = ((this.x - minVertexX) / (maxVertexX - minVertexX)) * 0.8 * p.width + 0.1 * p.width;
+    var newY = ((this.y - minVertexY) / (maxVertexY - minVertexY)) * 0.8 * p.height + 0.1 * p.height;
     var point = new Point(newX,newY);
     point.id = this.id;
 
@@ -359,6 +359,32 @@ function Triangle(v1,v2,v3) {
     this.generateId();
 }
 
+Triangle.prototype.getCCWvertices = function() {
+    //we need to get an array and then sort these vertices in CCW order
+    //this is the same as sorting the vectors from the avg point
+    //to the vertices
+
+    var compareFunc = function(a,b) {
+        var angleA = p.atan2(a.x,a.y);
+        var angleB = p.atan2(b.x,b.y);
+        return angleA-angleB;
+    };
+
+    var avgPoint = this.getAvgPoint();
+    var sortArray = [];
+
+    for(var i = 0; i < this.vertices.length; i++)
+    {
+        var v = this.vertices[i];
+        var sortObj = {'id':v.id,
+                       'x':v.x - avgPoint.x,
+                       'y':v.y - avgPoint.y};
+        sortArray.push(sortObj);
+    }
+    sortArray.sort(compareFunc);
+    return sortArray;
+}
+
 Triangle.prototype.toString = function() {
 	return "Triangle: " + this.id;
 }
@@ -626,7 +652,7 @@ Triangle.prototype.containsPoint = function(testPoint) {
     //not too bad -- just do the sameside test for all
     var ss = Triangle.prototype.sameSide;
 
-    //TODO: we need to change this for when the point is on the triangle line,
+    //we need to change this for when the point is on the triangle line,
     //this technically means the triangle "contains" the point which is kinda bs
     var ss1 = ss(a,b,c,testPoint);
     var ss2 = ss(b,c,a,testPoint);
@@ -800,13 +826,18 @@ triLibrary.prototype.deleteTri = function(tri) {
 
 triLibrary.prototype.outputAllTris = function() {
     var textForOutput = "";
+
     for(var i = 0; i < this.tris.length; i++)
     {
         var t = this.tris[i];
-        var a = t.vertices[0]; var b = t.vertices[1]; var c = t.vertices[2];
 
-        textForOutput += "Tri num " + String(i + 1) + ": " + a.id + " " + b.id + " " + c.id + "\n";
+        var sortedV = t.getCCWvertices();
+        var a = sortedV[0]; var b = sortedV[1]; var c = sortedV[2];
+
+        textForOutput += String(i + 1) + " " + a.id + " " + b.id + " " + c.id + "\n";
     }
+
+    textForOutput = String(this.tris.length) + " 3 0 \n" + textForOutput;
     return textForOutput;
 }
 
@@ -1152,13 +1183,6 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 		throw new Error("error -- that vertex isnt in my set");
 	}
 
-    //debug check
-    var debugCheck = false; // TODO
-    if(this.parentVertex.id == 2 && vertex.id == 6)
-    {
-        console.log("debuggin!!!");
-        debugCheck = true;
-    }
 
 	//we need to get the "location" of vertex, and then one before and one after
 	var itsIndex = this.getIndexOf(vertex);
@@ -1167,12 +1191,6 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 
 	var pBefore = this.myVertices[oneBefore];
 	var pAfter = this.myVertices[oneAfter];
-
-    if(debugCheck)
-    {
-        console.log("point before", pBefore);
-        console.log("and after", pAfter);
-    }
 
 	//make two tris, but use a set because there could be only one tri
 	var triSet = new geoSet();
@@ -1387,8 +1405,6 @@ bbckLibrary.prototype.addTri = function(tri) {
 
 bbckLibrary.prototype.findTriContainingPoint = function(point) {
     var startTri = fLibrary.tLibrary.tris[0];
-    //TODO -- this tri might not exist yet
-
     //enter the loop... ?
     var result = this.walkingPointLocation(startTri,point);
     return result;
@@ -1514,7 +1530,7 @@ fullLibrary.prototype.drawAllTris = function(drawMode) {
 	this.tLibrary.drawAllTris(drawMode);
 }
 
-fullLibrary.highlightTrisContainingPoint = function(point) {
+fullLibrary.prototype.highlightTrisContainingPoint = function(point) {
 	this.tLibrary.highlightTrisContainingPoint(point);
 }
 
@@ -1548,11 +1564,9 @@ fullLibrary.prototype.getTrisOnEdge = function(edge) {
 }
 
 fullLibrary.prototype.getTriContainingPoint = function(point) {
-	console.log("NEED TO DO WALKING POINT LOCATION!!");
     //try this out
     return this.bLibrary.findTriContainingPoint(point);
-    //TODO
-	return this.tLibrary.getTriContainingPoint(point);
+	//return this.tLibrary.getTriContainingPoint(point);
 }
 
 fullLibrary.prototype.getEdgesWithOneTri = function() {

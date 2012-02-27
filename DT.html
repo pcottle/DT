@@ -9,7 +9,7 @@
 <p>
 click to add points, spacebar afterwards for faster insertion
 <button onclick="javascript:drawMode = !drawMode">Draw mode</button>
-<button onclick="javascript:randomPoints()">Random Points</button>
+<button onclick="javascript:toggleRandPoints()">Random Points</button>
 </p>
 <link href="style.css" rel="stylesheet" type="text/css"/>
 
@@ -31,12 +31,16 @@ var theTri = null;
 var pointBuffer = [];
 var drawMode = true;
 var fileMode = false;
+var onRandomPoints = false;
+var randomPointTimeout = null;
 
 var allVertices = {};
 var allLinks = {};
 
 var maxVertexX = Number.MIN_VALUE;
 var maxVertexY = Number.MIN_VALUE;
+var minVertexX = Number.MAX_VALUE;
+var minVertexY = Number.MAX_VALUE;
 
 
 function eraseCircle() {
@@ -113,11 +117,11 @@ function sketchProc(processing) {
                 //need to convert this x and y into file coordinates
                 x = x - 0.1 * p.width;
                 x = x / (0.8 * p.width);
-                x = x * maxVertexX;
+                x = x * (maxVertexX - minVertexX);
 
                 y = y - 0.1 * p.height;
                 y = y / (0.8 * p.height);
-                y = y * maxVertexY;
+                y = y * (maxVertexY - minVertexY);
 
                 var id = Math.round(Math.random() * 10000);
                 toInsert = new Vertex(id,x,y);
@@ -158,12 +162,26 @@ function sketchProc(processing) {
     };
 }
 
+function toggleRandPoints()
+{
+    if(!onRandomPoints)
+    {
+        onRandomPoints = true;
+        randomPoints();
+    }
+    else
+    {
+        onRandomPoints = false;
+        clearTimeout(randomPointTimeout);
+    }
+}
+
 function randomPoints()
 {
 	var p1 = randPoint();
 	insertAnyPoint(p1);
 
-	setTimeout("randomPoints()",200);
+	randomPointTimeout = setTimeout("randomPoints()",200);
 }
 
 function outputFile()
@@ -197,13 +215,18 @@ function loadFile()
 
 function readInVertices(numVertices,lines)
 {
+    maxVertexX = Number.MIN_VALUE;
+    maxVertexY = Number.MIN_VALUE;
+    minVertexX = Number.MAX_VALUE;
+    minVertexY = Number.MAX_VALUE;
+
     var numVertices = 0;
     var vBuffer = [];
     fileMode = true;
 
     allVertices = {};
 
-    var regex = /\s*(\d+)\s+([.0-9]+)\s+([.0-9]+)/;
+    var regex = /\s*(\d+)\s+([-e+.0-9]+)\s+([-e+.0-9]+)/;
     //get min and max
     for(var i = 0; i <= lines.length; i++)
     {
@@ -225,7 +248,14 @@ function readInVertices(numVertices,lines)
         {
             maxVertexX = xCoord;
         }
-
+        if(xCoord < minVertexX)
+        {
+            minVertexX = xCoord;
+        }
+        if(yCoord < minVertexY)
+        {
+            minVertexY = yCoord;
+        }
         if(yCoord > maxVertexY)
         {
             maxVertexY = yCoord;
@@ -233,6 +263,7 @@ function readInVertices(numVertices,lines)
     }
 
      
+    console.log("lines length is ", lines.length);
     //read in vertices
     for(var i = 0; i <= lines.length; i++)
     {

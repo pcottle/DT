@@ -232,6 +232,11 @@ Circle.prototype.circleFromPoints = function (p1,p2,p3) {
     if(!centerX || !centerY || !radius)
     {
         console.log("warning -- invalid circumcircle");
+        console.log("the points");
+        console.log(p1,p2,p3);
+        console.log("center center radius");
+        console.log(centerX,centerY,radius);
+        console.log("slope",slope1,slope2);
         return null;
         throw new Error("invalid circumcircle, center or radius is undefined");
     }
@@ -446,10 +451,23 @@ Triangle.prototype.drawHighlighted = function() {
     p.noFill();
 }
 
-
+Triangle.prototype.isGhostTri = function() {
+    if(!this.hasCheckedGhost)
+    {
+        this.hasCheckedGhost = true;
+        this.isGhost = (this.vertices[0].id < 0 || this.vertices[1].id < 0 || this.vertices[2].id < 0);
+    }
+    return this.isGhost;
+}
 
 Triangle.prototype.draw = function() {
     //with scaled coordinates
+    if(this.isGhostTri())
+    {
+        //return; TODO
+    }
+
+
     
     Point.prototype.normalPoint();
     //draw the points
@@ -842,6 +860,7 @@ function insertAnyPoint(point) {
     //see if theres a tri containing this point
 	fLibrary.addVertex(point);
     var result = fLibrary.getTriContainingPoint(point);
+    console.log(result);
     if(result)
     {
         insertPointInsideTri(result,point);
@@ -974,6 +993,8 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 	//its implied that we are querying the edge of parentVertex -> vertex
 	if(!this.myVertexSet.isIn(vertex))
 	{
+        console.log("the link is this", this);
+        console.log("the point is this", vertex);
 		throw new Error("error -- that vertex isnt in my set");
 	}
 
@@ -993,77 +1014,6 @@ Link.prototype.getNeighborTrisOfEdge = function(vertex) {
 
     triSet.add(tri1);
     triSet.add(tri2);
-
-    var all = triSet.getAll();
-    if(all.length == 1)
-    {
-        return all;
-    }
-
-	//ok we have to test whether wraparound has occurred (aka forget about
-	//the ghost vertex). To do this, take the vector from
-	//our parent vertex to the pBefore or pAfter, and cross that
-	//with the vector of parentVertex to vertex. for before, it should
-	//be positive, for after, it should be negative
-
-    var beforeAvg = tri1.getAvgPoint();
-    var afterAvg = tri2.getAvgPoint();
-	
-	var pX = this.parentVertex.x; var pY = this.parentVertex.y;
-	var vX = vertex.x; var vY = vertex.y;
-
-	var mainVector = $V([vX - pX,vY - pY,0]);
-	var beforeVector = $V([beforeAvg.x - pX, beforeAvg.y - pY,0]);
-	var afterVector = $V([afterAvg.x - pX, afterAvg.y - pY,0]);
-
-	var beforeCross = beforeVector.cross(mainVector);
-	var afterCross = afterVector.cross(mainVector);
-
-	//ok so the sign of beforeCross should be positive, and
-	//the sign of after cross should be negative
-	
-	var beforeSign = Math.round(beforeCross.elements[2] / Math.abs(beforeCross.elements[2]));
-	var afterSign = Math.round(afterCross.elements[2] / Math.abs(afterCross.elements[2]));
-
-    //ugly hack to check if our y coordinates are flipped because these are points
-    //and not vertices
-    if(this.parentVertex.isPoint || true)
-    {
-        beforeSign *= -1; afterSign *= -1;
-    }
-
-	var beforeGood = false;
-	var afterGood = false;
-	if(beforeSign == 1)
-	{
-		beforeGood = true;
-	}
-	if(afterSign == -1)
-	{
-		afterGood = true;
-	}
-
-    /*
-	if(afterGood + beforeGood == 1)
-	{
-		console.log("suspected convex hull edge!");
-		console.log("this point", this.parentVertex.id, " and this ", vertex.id);
-	}
-    */
-
-	if(afterGood + beforeGood == 0)
-	{
-		console.log("before sign", beforeSign, " and after sign ", afterSign);
-		console.log("before point", pBefore.id, " and after point ", pAfter.id);
-		console.log("this point", this.parentVertex.id, " and this ", vertex.id);
-        console.log("before vec", beforeVector, " and main vec", mainVector);
-        console.log("before cross main result", beforeCross);
-        console.log("before point", pBefore, " and main point", vertex);
-		throw new Error("edge with no neighbors!");
-	}
-
-	if(!beforeGood) { triSet.remove(tri1); }
-	if(!afterGood)  { triSet.remove(tri2); }
 
 	return triSet.getAll();
 }
@@ -1157,9 +1107,7 @@ Link.prototype.deleteVertex = function(vertex) {
 Link.prototype.removeVertex = function(vertex) {
 	if(!this.myVertexSet.isIn(vertex))
 	{
-		console.log("warning -- deleting a vertex that isn't there");
-		console.log("link",this);
-		console.log("vertex",vertex);
+        //this is fine because triangles share edges and you delete them alot
 		return;
 	}
 
@@ -1308,6 +1256,14 @@ function fullLibrary() {
 	this.tLibrary = new triLibrary();
 	this.bLibrary = new bbckLibrary();
 	this.vertexSet = new geoSet();
+
+    //make the ghost tri and add it to both
+    var v1 = new Point(0,10000);
+    var v2 = new Point(1000,1000);
+    var v3 = new Point(10,-1000);
+
+    var tri = new Triangle(v1,v2,v3);
+    this.addTri(tri);
 }
 
 fullLibrary.prototype.addVertex = function(vertex) {

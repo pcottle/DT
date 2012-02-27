@@ -106,7 +106,7 @@ function sketchProc(processing) {
             var p1 = new Point(p.mouseX,p.mouseY);
 
             pointBuffer.push(p1);
-            if(pointBuffer.length == 3)
+            if(pointBuffer.length == 3 && false)
             {
                 p1 = pointBuffer[0];
                 p2 = pointBuffer[1];
@@ -115,10 +115,10 @@ function sketchProc(processing) {
                 var tri = new Triangle(p1,p2,p3);
                 fLibrary.addTri(tri);
             }
-	    else
-	    {
-		insertAnyPoint(p1);
-	    }
+            else
+            {
+                insertAnyPoint(p1);
+            }
         }
         else if(p.mouseButton == 39)
         {
@@ -205,20 +205,7 @@ function readInVertices(numVertices,lines)
             var newlyMade = new Vertex(vertexNum,xCoord,yCoord);
             allVertices[vertexNum] = newlyMade;
             numVertices++;
-            if(numVertices > 3)
-            {
-                insertAnyPoint(newlyMade);
-            }
-
-            if(numVertices == 3)
-            {
-                //make a tri and add it
-                var vArray = [];
-                for(key in allVertices)
-                { vArray.push(allVertices[key]); }
-                var tri = new Triangle(vArray[0],vArray[1],vArray[2]);
-                fLibrary.addTri(tri);
-            }
+            insertAnyPoint(newlyMade);
         }
     }
     catch(err)

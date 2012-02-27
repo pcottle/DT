@@ -70,6 +70,33 @@ Segment.prototype.normalSegment = function() {
     p.stroke(0,0,0);
 }
 
+Segment.prototype.pointOnSegment = function(a,b,c) {
+    //first get the cross product between b-a and c-a and check that it's zero
+    var Ba = $V([b.x - a.x, b.y - a.y, 0]);
+    var Ca = $V([c.x - a.x, c.y - a.y, 0]);
+
+    var crossResultVec = Ba.cross(Ca);
+    var crossResult = crossResultVec.elements[2];
+
+    if(Math.abs(crossResult) > 0.001)
+    {
+        return false;
+    }
+    //now check if its inside segment
+    var dotResult = Ba.dot(Ca);
+    if(dotResult < 0)
+    {
+        return false;
+    }
+    //is the dot product less than the squared distance of the Ba vector?
+    var squaredDist = Ba.elements[0]*Ba.elements[0] + Ba.elements[1]*Ba.elements[1];
+    if(dotResult > squaredDist)
+    {
+        return false;
+    }
+    return true;
+}
+
 function Edge(v1,v2) {
     this.v1 = v1;
     this.v2 = v2;
@@ -218,6 +245,7 @@ Circle.prototype.circleFromPoints = function (p1,p2,p3) {
 
 	if(Math.abs(slope1 - slope2) < 0.01)
 	{
+        return null;
         throw new Error("that circumcirlce is invalid, points are on top of each other");
 		return;
 	}
@@ -537,7 +565,30 @@ Triangle.prototype.containsPoint = function(testPoint) {
 
     //TODO: we need to change this for when the point is on the triangle line,
     //this technically means the triangle "contains" the point which is kinda bs
-    return ss(a,b,c,testPoint) && ss(b,c,a,testPoint) && ss(c,a,b,testPoint);
+    var ss1 = ss(a,b,c,testPoint);
+    var ss2 = ss(b,c,a,testPoint);
+    var ss3 = ss(c,a,b,testPoint);
+
+    if(!ss1)
+    {
+        //see if its on the line
+        //ON LINE TEST
+        ss1 = Segment.prototype.pointOnSegment(a,b,testPoint);
+    }
+    if(!ss2)
+    {
+        ss2 = Segment.prototype.pointOnSegment(b,c,testPoint);
+    }
+    if(!ss3)
+    {
+        ss3 = Segment.prototype.pointOnSegment(c,a,testPoint);
+    }
+
+    if(testPoint.id == 9)
+    {
+        console.log("yo!");
+    }
+    return ss1 && ss2 && ss3;
 }
 
 
@@ -1253,6 +1304,7 @@ bbckLibrary.prototype.getNeighborsOfEdge = function(edge) {
 
 	if(tris1.length != tris2.length)
 	{
+        console.log("on this edge", edge, "i got");
 		console.log(tris1);
 		console.log(tris2);
 		throw new Error("weird, tris returned different lengths for 2 different directions");

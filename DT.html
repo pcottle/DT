@@ -160,22 +160,9 @@ function sketchProc(processing) {
             var toInsert = null;
             if(fileMode)
             {
-                //need to convert this x and y into file coordinates
-                x = x - 0.1 * p.width;
-                x = x / (0.8 * p.width);
-                x = x * (maxVertexX - minVertexX);
-
-                y = y - 0.1 * p.height;
-                y = y / (0.8 * p.height);
-                y = y * (maxVertexY - minVertexY);
-
-                var id = Math.round(Math.random() * 10000);
-                toInsert = new Vertex(id,x,y);
+                resetEnvironment();
             }
-            else
-            {
-                toInsert = new Point(x,y);
-            }
+            toInsert = new Point(x,y);
 
             pointBuffer.push(toInsert);
             if(pointBuffer.length == 3)
@@ -467,6 +454,7 @@ function loadDefaultFile(fileName)
 
 function resetEnvironment()
 {
+    fileMode = false;
     shouldStop = false;
     fLibrary = new fullLibrary();
     pointBuffer = [];

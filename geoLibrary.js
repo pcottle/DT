@@ -865,7 +865,7 @@ function doFlipAlgorithmWithTris(trisToStart)
 	//now all edges are in buffer... start the checking process
 	while(edgeQueue.length > 0)
 	{
-		var e = edgeQueue.pop();
+        var e = edgeQueue.pop();
 		if(checkedEdges[e.id])
 		{ continue; }
 
@@ -1438,9 +1438,18 @@ bbckLibrary.prototype.refreshConvexHullList = function() {
 }
 
 bbckLibrary.prototype.findTriContainingPoint = function(point) {
-    var startTri = fLibrary.tLibrary.tris[0];
+    if(!(this.startingTriForWPL && fLibrary.triSet.isIn(this.startingTriForWPL)))
+    {
+        //reset our starting try
+        this.startingTriForWPL = fLibrary.tLibrary.tris[0];
+    }
+    var startTri = this.startingTriForWPL;
     //enter the loop... ?
     var result = this.walkingPointLocation(startTri,point);
+    if(result)
+    {
+        this.startingTriForWPL = result;
+    }
     return result;
 }
 
@@ -1452,7 +1461,8 @@ bbckLibrary.prototype.walkingPointLocation = function(startTri,point) {
 
     while(triQueue.length > 0)
     {
-        var t = triQueue.pop();
+        var t = triQueue.shift();
+        
         
         //dont search the same tri twice
         //this kinda ends up being like depth first graph search

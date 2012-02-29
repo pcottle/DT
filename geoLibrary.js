@@ -1151,6 +1151,10 @@ geoSet.prototype.remove = function(obj) {
 }
 
 geoSet.prototype.isIn = function(obj) {
+	if(!obj)
+	{
+		return false;
+	}
 	return this.mySet[obj.id];
 }
 
@@ -1356,7 +1360,8 @@ Link.prototype.drawEdges = function() {
 function bbckLibrary() {
 	this.vertexToLink = {};
 	this.vertexToObj = {};
-    this.startingTriForWPL = null;
+	this.startingTriForWPL = null;
+	this.edgesWithOneTri = new geoSet();
 }
 
 bbckLibrary.prototype.addVertex = function(vertex) {
@@ -1405,12 +1410,30 @@ bbckLibrary.prototype.insertEdge = function(edge) {
 }
 
 bbckLibrary.prototype.addTri = function(tri) {
-    this.startingTriForWPL = tri;
 
 	var edges = tri.getEdges();
 	for(var i = 0; i < 3; i++)
 	{
 		this.insertEdge(edges[i]);
+	}
+	for(var i = 0; i < 3; i++)
+	{
+		var e = edges[i];
+		this.edgesWithOneTri.add(e); 
+	}
+}
+
+bbckLibrary.prototype.refreshConvexHullList = function() {
+	var allEdges = this.edgesWithOneTri.getAll();
+	this.edgesWithOneTri = new geoSet();
+
+	for(var i = 0; i < allEdges.length; i++)
+	{
+		var n = this.getTrisOnEdge(allEdges[i]);
+		if(n.length == 1)
+		{
+			this.edgesWithOneTri.add(allEdges[i]);
+		}
 	}
 }
 
@@ -1462,6 +1485,7 @@ bbckLibrary.prototype.deleteTri = function(tri) {
 	for(var i = 0; i < 3; i++)
 	{
 		this.deleteEdge(edges[i]);
+		this.edgesWithOneTri.remove(edges[i]);
 	}
 }
 
@@ -1479,7 +1503,17 @@ bbckLibrary.prototype.getTrianglesForVertex = function(vertex) {
 }
 
 bbckLibrary.prototype.getTrisOnEdge = function(edge) {
-	return this.getNeighborsOfEdge(edge);
+	var tris = this.getNeighborsOfEdge(edge);
+	var legitTris = [];
+	for(var i = 0; i < tris.length; i++)
+	{
+		var t = tris[i];
+		if(fLibrary.triSet.isIn(t))
+		{
+			legitTris.push(t);
+		}
+	}
+	return legitTris;
 }
 
 bbckLibrary.prototype.getNeighborsOfEdge = function(edge) {
@@ -1500,12 +1534,13 @@ bbckLibrary.prototype.getNeighborsOfEdge = function(edge) {
 
 	if(tris1.length != tris2.length)
 	{
+		/*
         console.log("on this edge", edge, "i got");
 		console.log(tris1);
 		console.log(tris2);
         console.warn("weird!!");
+		*/
         return triSet1.union(triSet2);
-		throw new Error("weird, tris returned different lengths for 2 different directions");
         //TODO
 	}
 	//arbitrary selection
@@ -1520,7 +1555,6 @@ function fullLibrary() {
 
     //eff the ghost vertex, lets make a set of triangles
     this.triSet = new geoSet();
-
 
 }
 
@@ -1581,7 +1615,10 @@ fullLibrary.prototype.getTriContainingPoint = function(point) {
 }
 
 fullLibrary.prototype.getEdgesWithOneTri = function() {
-	console.log("NEED TO DO THIS ALSO -- edge query for convex hull");
-	return this.tLibrary.getEdgesWithOneTri();
+	this.bLibrary.refreshConvexHullList();
+
+	return this.bLibrary.edgesWithOneTri.getAll();
+	
+	//return this.tLibrary.getEdgesWithOneTri();
 }
 

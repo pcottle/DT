@@ -54,6 +54,7 @@ $j = jQuery.noConflict();
 var shouldStop = false;
 var insertTimeout = null;
 var currentSpeed = 10;
+var startTime = null;
 
 var fileText;
 var canvas;
@@ -338,6 +339,9 @@ function readInVertices(lines)
         vBuffer.push(newlyMade);
 
     }
+    var d = new Date();
+    startTime = d;
+    console.log("Starting now", d);
     startVertexInsertion();
 }
 
@@ -368,11 +372,35 @@ function startVertexInsertion()
     vBuffer.splice(0,3);
 
     //now set a timeout to insert tris
-    insertVertex(0);
+	if(currentSpeed)
+	{
+		insertVertex(0);
+	}
+	else
+	{
+		//for timings, the recursive call got to be too great
+
+		for(var i = 0; i < vBuffer.length; i++)
+		{
+			insertAnyPoint(vBuffer[i]);
+			if(i % 100 == 0)
+			{
+				console.log("inserting vertex ", i);
+			}
+		}
+		var d = new Date();
+		console.log("Done!",d);
+		var seconds = (d.getTime() - startTime.getTime())/1000;
+		console.log("Number of seconds: ", seconds);
+	}
 }
 
 function insertVertex(num)
 {
+    if(num % 100 == 0)
+    {
+		console.log("inserting vertex ", num);
+	}
     if(shouldStop)
     {
         shouldStop = false;
@@ -380,6 +408,10 @@ function insertVertex(num)
     }
     if(num == vBuffer.length)
     {
+		var d = new Date();
+		console.log("Done!",d);
+		var seconds = (d.getTime() - startTime.getTime())/1000;
+		console.log("Number of seconds: ", seconds);
         return;
     }
     insertAnyPoint(vBuffer[num]);

@@ -11,7 +11,10 @@ click to add points, spacebar afterwards for faster insertion
 </p>
 <div style="position:absolute;left:20px;top:200px;width:100px;height:400px;">
     <button onclick="javascript:drawMode = !drawMode">Draw mode</button>
-    <button onclick="javascript:toggleRandPoints()">Random Points</button>
+    <button onclick="javascript:resetEnvironment()">Clear Board</button>
+
+    <!-- <button onclick="javascript:toggleRandPoints()">Random Points</button> -->
+
     <button onclick="javascript:outputId = !outputId">Toggle ID</button>
     <button onclick="javascript:stopInserting()">Stop Insertion</button>
 <p></p>
@@ -39,7 +42,7 @@ click to add points, spacebar afterwards for faster insertion
 <link href="style.css" rel="stylesheet" type="text/css"/>
 
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
-<script type="text/javascript" src="jquery.min.js"></script>
+<!-- <script type="text/javascript" src="jquery.min.js"></script> -->
 <script type="text/javascript" src="geoLibrary.js"></script>
 <script type="text/javascript" src="sylvester.src.js"></script>
 <script type="text/javascript">
@@ -50,7 +53,7 @@ $j = jQuery.noConflict();
 
 var shouldStop = false;
 var insertTimeout = null;
-var currentSpeed = 100;
+var currentSpeed = 10;
 
 var fileText;
 var canvas;
@@ -309,7 +312,6 @@ function readInVertices(lines)
     }
 
      
-    console.log("lines length is ", lines.length);
     //read in vertices
     arrayShuffle(lines);
 
@@ -427,8 +429,6 @@ function loadDefaultFile(fileName)
     var fileText = fileData[fileName];
     var lines = fileText.split('\n');
     lines.splice(0,1);
-    console.log("lines");
-    console.log(lines);
 
     readInVertices(lines);
 }
@@ -457,6 +457,7 @@ $j(document).ready(function(){
     var testFile = "12 2 0 0\n1 0 0\n2 0 3\n3 3 0\n 4 3 3\n5 1 1 \n 6 1 2\n7 2 1 \n 8 2 2 \n 9 0 1.5\n 10 1.5 0\n11 3 1.5\n 12 1.5 3";
     $j('#inputFile').val(testFile);
     //loadFile();
+    loadDefaultFile('Spiral');
 
 });
 

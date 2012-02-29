@@ -522,9 +522,9 @@ Triangle.prototype.getCircumcircle = function() {
     }
     this.hasGeneratedCircle = true;
 
-    var v1 = this.vertices[0];
-    var v2 = this.vertices[1];
-    var v3 = this.vertices[2];
+    var v1 = this.vertices[0].getScaledCoords();
+    var v2 = this.vertices[1].getScaledCoords();
+    var v3 = this.vertices[2].getScaledCoords();
     
     var c = Circle.prototype.circleFromPoints(v1,v2,v3);
     this.myCircumcircle = c;

@@ -21,7 +21,7 @@ function arrayShuffle(theArray) {
 };
 
 highlightedEdges = [];
-var outputId = true;
+var outputId = false;
 
 /************************
     Primitives and such

@@ -13,6 +13,7 @@ click to add points, spacebar afterwards for faster insertion
     <button onclick="javascript:drawMode = !drawMode">Draw mode</button>
     <button onclick="javascript:toggleRandPoints()">Random Points</button>
     <button onclick="javascript:outputId = !outputId">Toggle ID</button>
+    <button onclick="javascript:stopInserting()">Stop Insertion</button>
 <p></p>
     <select width="50px"size="10" id="fileSelect" onchange="javascript:changeFile()">
         <option>Tri file</option>
@@ -25,6 +26,13 @@ click to add points, spacebar afterwards for faster insertion
         <option>Ladder file</option>
         <option>633 file</option>
 
+    </select>
+    <p></p>
+    <select size="6" id="speedSelect" onchange="javascript:changeSpeed()">
+        <option>ASAP</option>
+        <option>Fast</option>
+        <option>Medium</option>
+        <option>Slow</option>
     </select>
 
 </div>
@@ -39,6 +47,11 @@ click to add points, spacebar afterwards for faster insertion
 /*********Globals**********/
 
 $j = jQuery.noConflict();
+
+var shouldStop = false;
+var insertTimeout = null;
+var currentSpeed = 100;
+
 var fileText;
 var canvas;
 var p;
@@ -50,6 +63,8 @@ var drawMode = true;
 var fileMode = false;
 var onRandomPoints = false;
 var randomPointTimeout = null;
+
+var vBuffer = [];
 
 var allVertices = {};
 var allLinks = {};
@@ -130,7 +145,6 @@ function sketchProc(processing) {
     }
     
     processing.mouseClicked = function() {
-        //console.log("button" + p.mouseButton);
 
         if(p.mouseButton == 37)
         {
@@ -190,6 +204,12 @@ function sketchProc(processing) {
     };
 }
 
+function stopInserting()
+{
+    shouldStop = true;
+    clearTimeout(insertTimeout);
+}
+
 function toggleRandPoints()
 {
     if(!onRandomPoints)
@@ -235,8 +255,7 @@ function loadFile()
     lines.splice(0,1);
     
     //delete the existing library 
-    fLibrary = new fullLibrary();
-    pointBuffer = [];
+    resetEnvironment();
 
     readInVertices(lines);
 }
@@ -249,7 +268,6 @@ function readInVertices(lines)
     minVertexY = Number.MAX_VALUE;
 
     var numVertices = 0;
-    var vBuffer = [];
     fileMode = true;
 
     allVertices = {};
@@ -317,17 +335,74 @@ function readInVertices(lines)
         numVertices++;
         vBuffer.push(newlyMade);
 
-        if(numVertices == 3)
-        {
-            var tri = new Triangle(vBuffer[0],vBuffer[1],vBuffer[2]);
-            fLibrary.addTri(tri);
-        }
-        else if(numVertices > 3)
-        {
-            //console.log("inserting point", newlyMade.id);
-            insertAnyPoint(newlyMade);
-        }
     }
+    startVertexInsertion();
+}
+
+function startVertexInsertion()
+{
+    //legit tri and also start timeout!
+    var a = vBuffer[0];
+    var b = vBuffer[1];
+    var c = vBuffer[2];
+
+    var tri = new Triangle(a,b,c);
+
+    //also splice the vbuffer array, the first three off once you get a legitone
+
+    while(tri.isDegenerate())
+    {
+        arrayShuffle(vBuffer);
+        a = vBuffer[0];
+        b = vBuffer[1];
+        c = vBuffer[2];
+
+        tri = new Triangle(a,b,c);
+    }
+
+    fLibrary.addTri(tri);
+
+    //splice off first three
+    vBuffer.splice(0,3);
+
+    //now set a timeout to insert tris
+    insertVertex(0);
+}
+
+function insertVertex(num)
+{
+    if(shouldStop)
+    {
+        shouldStop = false;
+        return;
+    }
+    if(num == vBuffer.length)
+    {
+        return;
+    }
+    insertAnyPoint(vBuffer[num]);
+
+    //timeout thing
+    if(currentSpeed == 0)
+    {
+        insertVertex(num+1);
+    }
+    else
+    {
+        insertTimeout = setTimeout(function(){insertVertex(num+1);},currentSpeed);
+    }
+
+}
+
+function changeSpeed() {
+    var speedName = $j('#speedSelect').val();
+    if(!speedName)
+    {
+        return;
+    }
+
+    var nameToNum = {'ASAP':0,'Fast':10,'Medium':100,'Slow':1000};
+    currentSpeed = nameToNum[speedName];
 }
 
 function changeFile() {
@@ -347,8 +422,7 @@ function loadDefaultFile(fileName)
     {
         return;
     }
-    fLibrary = new fullLibrary();
-    pointBuffer = [];
+    resetEnvironment();
 
     var fileText = fileData[fileName];
     var lines = fileText.split('\n');
@@ -357,6 +431,14 @@ function loadDefaultFile(fileName)
     console.log(lines);
 
     readInVertices(lines);
+}
+
+function resetEnvironment()
+{
+    shouldStop = false;
+    fLibrary = new fullLibrary();
+    pointBuffer = [];
+    vBuffer = [];
 }
 
 
@@ -370,12 +452,7 @@ $j(document).ready(function(){
     
     theTri = new Triangle(p1,p2,p3);
 
-    //theEdge = new Edge(p1,p2);
-    fLibrary = new fullLibrary();
-    //fLibrary.addTri(theTri);
-	//pointBuffer.length = 3;
-	//randomPoints();
-
+    resetEnvironment();
 
     var testFile = "12 2 0 0\n1 0 0\n2 0 3\n3 3 0\n 4 3 3\n5 1 1 \n 6 1 2\n7 2 1 \n 8 2 2 \n 9 0 1.5\n 10 1.5 0\n11 3 1.5\n 12 1.5 3";
     $j('#inputFile').val(testFile);

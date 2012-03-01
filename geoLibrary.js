@@ -1464,6 +1464,10 @@ bbckLibrary.prototype.walkingPointLocation = function(startTri,point) {
         var t = triQueue.shift();
         
         
+        if(!t)
+        {
+            continue;
+        }
         //dont search the same tri twice
         //this kinda ends up being like depth first graph search
         if(checkedTris.isIn(t))

@@ -3,6 +3,9 @@
     
 *********/
 
+//globals
+takenIds = {};
+
 function randPoint() {
     var x = p.random(0,p.width);
     var y = p.random(0,p.height);
@@ -197,7 +200,12 @@ function Point(x,y) {
     this.isPoint = true;
     
     this.strokeWidth = 2;
-    this.id = Math.round(Math.random()*1000);
+    this.id = Math.round(Math.random()*10000);
+    while(takenIds[this.id])
+    {
+        this.id = Math.round(Math.random()*10000);
+    }
+    takenIds[this.id] = true;
 }
 
 Point.prototype.toString = function() {

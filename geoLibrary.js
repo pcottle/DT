@@ -1474,6 +1474,7 @@ bbckLibrary.prototype.walkingPointLocation = function(startTri,point) {
         
         if(!t)
         {
+            console.warn("invalid tri from walking point location");
             continue;
         }
         //dont search the same tri twice

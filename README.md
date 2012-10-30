@@ -6,7 +6,7 @@ This was a short project for John Shewchuk's 294-74 Mesh Generation and Processi
 
 ## Demo
 
-You can play with the algorithm and GUI [here](http://petercottle.com/DT/DT.html).
+You can play with the algorithm and GUI [here](http://petercottle.com/DT/DT.html) .
 
 ## Implementation
 

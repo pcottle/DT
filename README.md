@@ -2,6 +2,8 @@
 
 This was a short project for John Shewchuk's 294-74 Mesh Generation and Processing Class. A [Delaunay Triangulation](http://en.wikipedia.org/wiki/Delaunay_triangulation) is defined as triangulation where no point lies inside the circumcircle of any triangle in the triangulation
 
+I added a GUI on top of the algorithm that allows for circumcircle visualization and user interaction.
+
 <img src="http://petercottle.com/miscPics/dt.png"/>
 
 ## Demo
